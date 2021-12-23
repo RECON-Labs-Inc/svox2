@@ -16,5 +16,6 @@
     "lambda_beta": 1e-5,
     "lambda_sparsity": 1e-11,
     "background_brightness": 1.0,
-    "tv_early_only": 0
+    "tv_early_only": 0,
+    "sh_dim":1
 }

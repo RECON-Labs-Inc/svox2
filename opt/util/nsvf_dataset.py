@@ -64,7 +64,7 @@ class NSVFDataset(DatasetBase):
         split_name = split if split != "test_train" else "train"
 
         print("LOAD NSVF DATA", root, 'split', split)
-
+        print(root)
         self.split = split
 
         def sort_key(x):
@@ -95,6 +95,7 @@ class NSVFDataset(DatasetBase):
                 test_img_files = [x for x in img_files if x.startswith("1_")]
             img_files = test_img_files
 
+        print("IM dir name ", img_dir_name)
         assert len(img_files) > 0, "No matching images in directory: " + path.join(data_dir, img_dir_name)
         self.img_files = img_files
 
