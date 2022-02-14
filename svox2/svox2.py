@@ -573,6 +573,59 @@ class SparseGrid(nn.Module):
         results_sh[mask] = self.sh_data[idxs]
         return results_sigma, results_sh
 
+    def sample_max(self, points: torch.Tensor,
+               use_kernel: bool = True,
+               grid_coords: bool = False,
+               want_colors: bool = True):
+        """
+        Sample with max
+        """
+        if use_kernel and self.links.is_cuda and _C is not None:
+            assert points.is_cuda
+            return _SampleGridAutogradFunction.apply(
+                self.density_data, self.sh_data, self._to_cpp(grid_coords=grid_coords), points, want_colors
+            )
+        else:
+            if not grid_coords:
+                points = self.world2grid(points)
+            points.clamp_min_(0.0)
+            for i in range(3):
+                points[:, i].clamp_max_(self.links.size(i) - 1)
+            l = points.to(torch.long)
+            for i in range(3):
+                l[:, i].clamp_max_(self.links.size(i) - 2)
+            wb = points - l
+            wa = 1.0 - wb
+
+            lx, ly, lz = l.unbind(-1)
+            links000 = self.links[lx, ly, lz]
+            links001 = self.links[lx, ly, lz + 1]
+            links010 = self.links[lx, ly + 1, lz]
+            links011 = self.links[lx, ly + 1, lz + 1]
+            links100 = self.links[lx + 1, ly, lz]
+            links101 = self.links[lx + 1, ly, lz + 1]
+            links110 = self.links[lx + 1, ly + 1, lz]
+            links111 = self.links[lx + 1, ly + 1, lz + 1]
+
+            sigma000, rgb000 = self._fetch_links(links000)
+            sigma001, rgb001 = self._fetch_links(links001)
+            sigma010, rgb010 = self._fetch_links(links010)
+            sigma011, rgb011 = self._fetch_links(links011)
+            sigma100, rgb100 = self._fetch_links(links100)
+            sigma101, rgb101 = self._fetch_links(links101)
+            sigma110, rgb110 = self._fetch_links(links110)
+            sigma111, rgb111 = self._fetch_links(links111)
+
+            sigma_cube = torch.cat((sigma000, sigma001, sigma010, sigma011, sigma100, sigma101, sigma110, sigma111), dim=1)
+            color_cube = torch.cat((rgb000, rgb001,rgb010, rgb011, rgb100, rgb101, rgb110, rgb111), dim=1)
+            # color_cube = color_cube.reshape()
+            print("....")
+            # print(sigma_cube.shape)
+            # print(color_cube.shape)
+
+            return ([rgb000, rgb001, rgb010, rgb011, rgb100, rgb101, rgb110, rgb111],[sigma000, sigma001, sigma010, sigma011, sigma100, sigma101, sigma110, sigma111])
+            # return torch.max(sigma_cube), torch.max(color_cube, dim=0)
+
     def sample(self, points: torch.Tensor,
                use_kernel: bool = True,
                grid_coords: bool = False,

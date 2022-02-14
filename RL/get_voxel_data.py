@@ -15,10 +15,17 @@ from svox2 import *
 from pyvox.models import Vox, Color
 from pyvox.writer import VoxWriter
 
+from importlib import reload as reload
+
+reload(svox2)
+from svox2 import *
+
+
 
 def make_voxels(args):
     # checkpoint = str(Path("/workspace/svox2/opt/ckpt/conv_test/ckpt.npz"))
     checkpoint = args.checkpoint
+    # checkpoint = "/workspace/leo_test/pear/ckpt/ckpt.npz"
     cuda_device = 1
     grid = SparseGrid.load(checkpoint)
 
@@ -35,10 +42,33 @@ def make_voxels(args):
     grid_points = torch.cat((grid_mesh[0][...,None], grid_mesh[1][...,None], grid_mesh[2][...,None]), 3)
     num_voxels = grid_points.shape[0] * grid_points.shape[1] * grid_points.shape[2]
     grid_points = grid_points.reshape((num_voxels, 3))
-    grid_points = torch.tensor(grid_points, dtype=torch.float32)
+    grid_points = torch.tensor(grid_points, device = torch.device('cuda:1'), dtype=torch.float32)
 
-    density, color = grid.sample(grid_points, grid_coords=True)
+    print("GP", grid_points.shape)
+    # color, density = grid.sample(grid_points, grid_coords=True)
+    color, density = grid.sample_max(grid_points, grid_coords=True)
 
+    density_cube = torch.cat( density, dim=1)
+    color_cube = torch.stack( color, dim = 2)
+    color_intensity = torch.linalg.norm(color_cube, dim = 1)
+
+    density_max, max_indices = torch.max(density_cube, dim=1)
+
+    # dens # Caution, overrides previous max_indices 
+    _, max_indices  = torch.max(color_intensity, dim=1)
+
+    density = density_max
+    r = torch.gather(color_cube[:,0,:], 1, max_indices[..., None])
+    g = torch.gather(color_cube[:,1,:], 1, max_indices[..., None])
+    b = torch.gather(color_cube[:,2,:], 1, max_indices[..., None])
+
+    color = torch.cat((r, g, b),dim =1)
+
+
+
+    # color = color.detach.numpy()
+    print(density.shape)
+    print(color.shape)
     ##### density thresholding #####
     print("Density Thresholding...")
     np_density = np.abs(density.detach().numpy())
@@ -72,6 +102,7 @@ def make_voxels(args):
     print(f"MAX COLOR: {np_color.max()}")
     # np_color = np_color / np_color.max() 
     SH_C0 = 0.28209479177387814
+    SH_C0 = 1.5
     np_color = np_color * SH_C0 # mult SH first order coeff
     idx_gt_one = np_color > 1 
     np_color[idx_gt_one] = 1
@@ -132,11 +163,9 @@ def make_voxels(args):
     print('The Vox file created in ', str(output_path))
     VoxWriter(output_path, vox).write()
 
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--checkpoint', type=str, help="Project folder")
+    parser.add_argument('--checkpoint', type=str, help="Checkpoint folder")
     # parser.add_argument('--output_folder', type=str, help="output folder")
 
     args = parser.parse_args()
