@@ -1,0 +1,17 @@
+{
+    "eval": true,
+    "data_root": "/workspace/datasets/cactus",
+    "train_root": "/workspace/datasets/cactus/ckpt",
+    "variables": {
+        "sigma_thres": [0.5e-8, 1e-8, 1.25e-8, 1.5e-8, 1.75e-8, 2e-8, 5e-8] 
+    },
+    "tasks": [{
+        "train_dir": "sigma_thres_{sigma_thres}",
+        "flags": [
+            "--log_depth_map",
+            "--sigma_thres", "{sigma_thres}"
+        ],
+        "config": "/workspace/svox2/opt/configs/tv_base.json"
+       
+    }]
+}

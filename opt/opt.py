@@ -266,6 +266,7 @@ torch.manual_seed(20200823)
 np.random.seed(20200823)
 
 factor = 1
+print('0.0')
 dset = datasets[args.dataset_type](
                args.data_dir,
                split="train",
@@ -273,13 +274,14 @@ dset = datasets[args.dataset_type](
                factor=factor,
                n_images=args.n_train,
                **config_util.build_data_options(args))
-
+print(0)
 if args.background_nlayers > 0 and not dset.should_use_background:
     warn('Using a background model for dataset type ' + str(type(dset)) + ' which typically does not use background')
 
 dset_test = datasets[args.dataset_type](
         args.data_dir, split="test", **config_util.build_data_options(args))
 
+print(1)
 global_start_time = datetime.now()
 
 grid = svox2.SparseGrid(reso=reso_list[reso_id],
@@ -296,6 +298,7 @@ grid = svox2.SparseGrid(reso=reso_list[reso_id],
                         background_nlayers=args.background_nlayers,
                         background_reso=args.background_reso)
 
+print(2)
 # DC -> gray; mind the SH scaling!
 grid.sh_data.data[:] = 0.0
 grid.density_data.data[:] = 0.0 if args.lr_fg_begin_step > 0 else args.init_sigma
@@ -312,6 +315,7 @@ if grid.use_background:
 #  #  den[:, :, 0] = 1e9
 #  grid.density_data.data = den.view(osh)
 
+print(3)
 optim_basis_mlp = None
 
 if grid.basis_type == svox2.BASIS_TYPE_3D_TEXTURE:
@@ -366,6 +370,8 @@ if args.enable_random:
     warn("Randomness is enabled for training (normal for LLFF & scenes with background)")
 
 epoch_id = -1
+
+print(4)
 while True:
     dset.shuffle_rays()
     epoch_id += 1
@@ -395,6 +401,10 @@ while True:
             n_images_gen = 0
             for i, img_id in tqdm(enumerate(img_ids), total=len(img_ids)):
                 c2w = dset_test.c2w[img_id].to(device=device)
+                print("Rendering pose:", img_id)
+                print(c2w)
+                print("ndc")
+                print(dset_test.ndc_coeffs)
                 cam = svox2.Camera(c2w,
                                    dset_test.intrins.get('fx', img_id),
                                    dset_test.intrins.get('fy', img_id),
@@ -403,6 +413,7 @@ while True:
                                    width=dset_test.get_image_size(img_id)[1],
                                    height=dset_test.get_image_size(img_id)[0],
                                    ndc_coeffs=dset_test.ndc_coeffs)
+                # print("Cam is cuda", cam.is_cuda)
                 rgb_pred_test = grid.volume_render_image(cam, use_kernel=True)
                 rgb_gt_test = dset_test.gt[img_id].to(device=device)
                 all_mses = ((rgb_gt_test - rgb_pred_test) ** 2).cpu()

@@ -1,0 +1,17 @@
+{
+    "eval": true,
+    "data_root": "/workspace/datasets/cactus",
+    "train_root": "/workspace/datasets/cactus/ckpt",
+    "variables": {
+        "near_clip": [-0.125, -0.25]
+    },
+    "tasks": [{
+        "train_dir": "clip_run_{near_clip}",
+        "flags": [
+            "--log_depth_map",
+            "--near_clip", "{near_clip}"
+        ],
+        "config": "/workspace/svox2/opt/configs/near_clip_base.json"
+       
+    }]
+}

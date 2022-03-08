@@ -1,0 +1,9 @@
+# ninja log v5
+0	19535	1640764648	/workspace/svox2/build/temp.linux-x86_64-3.8/svox2/csrc/svox2.o	9f7d3d369aa439f5
+1	38162	1640764667	/workspace/svox2/build/temp.linux-x86_64-3.8/svox2/csrc/render_svox1_kernel.o	d23485412deec5ce
+1	38181	1640764667	/workspace/svox2/build/temp.linux-x86_64-3.8/svox2/csrc/misc_kernel.o	748a91c05facf800
+0	38295	1640764667	/workspace/svox2/build/temp.linux-x86_64-3.8/svox2/csrc/svox2_kernel.o	2270ac4f14da3ada
+1	38361	1640764667	/workspace/svox2/build/temp.linux-x86_64-3.8/svox2/csrc/optim_kernel.o	636d89e5c457c5f8
+1	38453	1640764667	/workspace/svox2/build/temp.linux-x86_64-3.8/svox2/csrc/loss_kernel.o	b42573f947008546
+1	38964	1640764668	/workspace/svox2/build/temp.linux-x86_64-3.8/svox2/csrc/render_lerp_kernel_nvol.o	57a79f886a76934
+1	39295	1640764668	/workspace/svox2/build/temp.linux-x86_64-3.8/svox2/csrc/render_lerp_kernel_cuvol.o	581662e01305efdc

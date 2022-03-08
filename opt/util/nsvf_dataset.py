@@ -7,6 +7,7 @@ import torch
 import torch.nn.functional as F
 from typing import NamedTuple, Optional, Union
 from os import path
+from pathlib import Path
 import os
 import cv2
 import imageio
@@ -14,6 +15,7 @@ from tqdm import tqdm
 import json
 import numpy as np
 from warnings import warn
+
 
 
 class NSVFDataset(DatasetBase):
@@ -85,8 +87,10 @@ class NSVFDataset(DatasetBase):
         img_files = sorted(os.listdir(path.join(root, img_dir_name)), key=sort_key)
 
         # Select subset of files
-        if self.split == "train" or self.split == "test_train":
+        if self.split == "train":
             img_files = [x for x in img_files if x.startswith("0_")]
+        elif self.split == "test_train":
+            print("Using all", len(img_files),"images")
         elif self.split == "val":
             img_files = [x for x in img_files if x.startswith("1_")]
         elif self.split == "test":
@@ -169,10 +173,64 @@ class NSVFDataset(DatasetBase):
             #  print('good', self.c2w_f64[:2], scene_scale)
 
         print('scene_scale', scene_scale)
+        
+        ## Write to cam_json!
+        cam_filename = Path(root)/"project_files"/"cam_data.json"
+        camera_dict = json.load(open(str(cam_filename.resolve())))
+        
+        def write_json(cam_filename):
+            with open( str(cam_filename.resolve()), "w") as f:
+                json.dump(camera_dict, f)
+                print("Wrote camera data to ",str(cam_filename.resolve()))
+
+        if "scale_factor" in camera_dict.keys():
+            print("Camera json file already has scale_factor:", camera_dict["scale_factor"])
+            print("Current scale factor", scene_scale)
+
+        ## Write to cam_json!
+        cam_filename = Path(root)/"project_files"/"cam_data.json"
+        camera_dict = json.load(open(str(cam_filename.resolve())))
+        
+        def write_json(cam_filename):
+            with open( str(cam_filename.resolve()), "w") as f:
+                json.dump(camera_dict, f)
+                print("Wrote camera data to ",str(cam_filename.resolve()))
+
+        if "scale_factor" in camera_dict.keys():
+            print("Camera json file already has scale_factor:", camera_dict["scale_factor"])
+            print("Current scale factor", scene_scale)
+
+        ## Write to cam_json!
+        cam_filename = Path(root)/"project_files"/"cam_data.json"
+        camera_dict = json.load(open(str(cam_filename.resolve())))
+        
+        def write_json(cam_filename):
+            with open( str(cam_filename.resolve()), "w") as f:
+                json.dump(camera_dict, f)
+                print("Wrote camera data to ",str(cam_filename.resolve()))
+
+        if "scale_factor" in camera_dict.keys():
+            print("Camera json file already has scale_factor:", camera_dict["scale_factor"])
+            print("Current scale factor", scene_scale)
+
+            if scene_scale != camera_dict["scale_factor"]:
+                print("Scale factors are different (they should not). Rewriting")
+                camera_dict["scale_factor"] = scene_scale
+                write_json(cam_filename)
+        else:
+            camera_dict["scale_factor"] = scene_scale
+            write_json(cam_filename)
+
+        ##camera_dict["scale_factor"] = scene_scale
+
+        
+
         self.c2w_f64[:, :3, 3] *= scene_scale
         self.c2w = self.c2w_f64.float()
 
         self.gt = torch.stack(all_gt).double() / 255.0
+
+        print("1, 0")
         if self.gt.size(-1) == 4:
             if white_bkgd:
                 # Apply alpha channel
@@ -180,6 +238,8 @@ class NSVFDataset(DatasetBase):
             else:
                 self.gt = self.gt[..., :3]
         self.gt = self.gt.float()
+
+        print("1, 1")
 
         assert full_size[0] > 0 and full_size[1] > 0, "Empty images"
         self.n_images, self.h_full, self.w_full, _ = self.gt.shape
@@ -211,8 +271,11 @@ class NSVFDataset(DatasetBase):
         print(' intrinsics (loaded reso)', self.intrins_full)
 
         self.scene_scale = scene_scale
+        print("[nsvf] 1, 2")
         if self.split == "train":
+            print("[nsvf] 1, 3")
             self.gen_rays(factor=factor)
+            print("[nsvf] 1, 4")
         else:
             # Rays are not needed for testing
             self.h, self.w = self.h_full, self.w_full

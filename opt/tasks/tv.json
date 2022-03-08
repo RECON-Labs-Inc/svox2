@@ -1,0 +1,17 @@
+{
+    "eval": false,
+    "data_root": "/workspace/datasets/cactus",
+    "train_root": "/workspace/datasets/cactus/ckpt",
+    "variables": {
+        "lambda_tv": [5e-05, 1e-05, 5e-06, 1e-6, 1e-4, 5e-4 ] 
+    },
+    "tasks": [{
+        "train_dir": "lambda_tv_{lambda_tv}",
+        "flags": [
+            "--log_depth_map",
+            "--lambda_tv", "{lambda_tv}"
+        ],
+        "config": "/workspace/svox2/opt/configs/tv_base.json"
+       
+    }]
+}

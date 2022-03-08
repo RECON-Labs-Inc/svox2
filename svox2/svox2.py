@@ -623,7 +623,8 @@ class SparseGrid(nn.Module):
             # print(sigma_cube.shape)
             # print(color_cube.shape)
 
-            return ([rgb000, rgb001, rgb010, rgb011, rgb100, rgb101, rgb110, rgb111],[sigma000, sigma001, sigma010, sigma011, sigma100, sigma101, sigma110, sigma111])
+            # Caution: I inverted the order of this, maybe some scripts will break
+            return ([sigma000, sigma001, sigma010, sigma011, sigma100, sigma101, sigma110, sigma111], [rgb000, rgb001, rgb010, rgb011, rgb100, rgb101, rgb110, rgb111])
             # return torch.max(sigma_cube), torch.max(color_cube, dim=0)
 
     def sample(self, points: torch.Tensor,

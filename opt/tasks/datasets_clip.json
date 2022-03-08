@@ -1,0 +1,17 @@
+{
+    "eval": true,
+    "render": false,
+    "data_root": "/workspace/datasets",
+    "train_root": "/workspace/datasets",
+    "variables": {
+        "scene": ["tangerine", "cctv", "cube_2"]
+    },
+    "tasks": [{
+        "train_dir": "{scene}/ckpt/std",
+        "flags": [
+            "--log_depth_map"
+        ],
+        "data_dir": "{scene}",
+        "config": "configs/fast.json"
+    }]
+}

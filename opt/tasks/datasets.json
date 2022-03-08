@@ -1,0 +1,19 @@
+{
+    "eval": true,
+    "render": false,
+    "data_root": "/workspace/datasets",
+    "train_root": "/workspace/datasets",
+    "variables": {
+        "scene": ["tangerine"],
+        "near_clip":[0.25, 0.5, 0.75, 1, 1.25 ]
+    },
+    "tasks": [{
+        "train_dir": "{scene}/ckpt/near_clip_{near_clip}",
+        "flags": [
+            "--log_depth_map",
+            "--near_clip", "{near_clip}"
+        ],
+        "data_dir": "{scene}",
+        "config": "configs/fast.json"
+    }]
+}

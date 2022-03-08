@@ -1,0 +1,19 @@
+{
+    "eval": false,
+    "data_root": "/workspace/datasets/cactus",
+    "train_root": "/workspace/datasets/cactus/ckpt",
+    "variables": {
+        "sh_dim": [1, 9],
+        "lambda_tv": [0.0005, 5e-05] 
+    },
+    "tasks": [{
+        "train_dir": "sh_dim_{sh_dim}_ltv_{lambda_tv}",
+        "flags": [
+            "--log_depth_map",
+            "--sh_dim", "{sh_dim}",
+            "--lambda_tv", "{lambda_tv}"
+        ],
+        "config": "/workspace/svox2/opt/configs/sh_dim_base.json"
+       
+    }]
+}
