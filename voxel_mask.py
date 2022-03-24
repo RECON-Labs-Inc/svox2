@@ -77,8 +77,7 @@ device = "cuda:0" if torch.cuda.is_available() else "cpu"
 # Load arguments from json
 # json_config_path = Path(data_dir)/"ckpt"/exp_name/"args.json"
 
-
-## CHANGE: to test_train
+# Doesn't seem necessary to actually load the dataset.
 dataset = datasets["nsvf"](
             data_dir,
             split="test_train",
