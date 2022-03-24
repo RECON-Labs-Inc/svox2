@@ -198,7 +198,10 @@ with torch.no_grad():
         depth_img = grid.volume_render_depth_image(cam,None)
         # depth_img = viridis_cmap(depth_img.cpu())
         depth_img_np = depth_img.cpu().numpy()
-        depth_filename = args.data_dir+"/result/depth_npy/" + NPY_PREFIX + str(img_id)+".npy"
+        if args.nofg:
+            depth_filename = args.data_dir+"/result/depth_mask/" + NPY_PREFIX + str(img_id)+".npy"
+        else:
+            depth_filename = args.data_dir+"/result/depth_npy/" + NPY_PREFIX + str(img_id)+".npy"
         np.save(depth_filename, depth_img_np)
         
         print("Saving depths in ", depth_filename )

@@ -24,15 +24,15 @@ from svox2 import *
 
 def make_voxels(args):
     # checkpoint = str(Path("/workspace/svox2/opt/ckpt/conv_test/ckpt.npz"))
-    checkpoint = "/workspace/datasets/TanksAndTempleBG/Truck/ckpt/tt_test/ckpt.npz"
-    # checkpoint = args.checkpoint
+    # checkpoint = "/workspace/datasets/TanksAndTempleBG/Truck/ckpt/tt_test/ckpt.npz"
+    checkpoint = args.checkpoint
     # checkpoint = "/workspace/leo_test/pear/ckpt/ckpt.npz"
     cuda_device = 1
     grid = SparseGrid.load(checkpoint, cuda_device)
 
     ##### grid sampling #####
     print("Sampling grids...")
-    grid_dim = 250
+    grid_dim = 128
     grid_res = torch.tensor([grid_dim, grid_dim, grid_dim])
 
     xx = torch.linspace(0, grid.links.shape[0],grid_res[0] )
@@ -47,7 +47,7 @@ def make_voxels(args):
 
     print("GP", grid_points.shape)
     # color, density = grid.sample(grid_points, grid_coords=True)
-    color, density = grid.sample_max(grid_points, grid_coords=True)
+    density, color = grid.sample_max(grid_points, grid_coords=True, use_kernel=False)
 
     density_cube = torch.cat( density, dim=1)
     color_cube = torch.stack( color, dim = 2)
@@ -72,7 +72,7 @@ def make_voxels(args):
     print(color.shape)
     ##### density thresholding #####
     print("Density Thresholding...")
-    np_density = np.abs(density.detach().numpy())
+    np_density = np.abs(density.cpu().detach().numpy())
 
     h = np.histogram(np_density)
     print(h)
@@ -92,7 +92,7 @@ def make_voxels(args):
     ##### color filtering #####
     print("Color Filtering...")
     # np_color = color.detach().numpy()[:, [0, 9, 18]] # for sh_dim=9 trained data
-    np_color = color.detach().numpy() # for sh_dim = 1 trained data
+    np_color = color.cpu().detach().numpy() # for sh_dim = 1 trained data
 
     # Ignore Negative Colors. 
     # DISCUSSION: is this 'right' thing to do?
@@ -107,7 +107,7 @@ def make_voxels(args):
     np_color = np_color * SH_C0 # mult SH first order coeff
     idx_gt_one = np_color > 1 
     np_color[idx_gt_one] = 1
-    nonzero_colors = np_color[nonzero_idxs[0], :]
+    nonzero_colors = np_color[nonzero_idxs[0], :] + 0.5
 
     h = np.histogram(np_color[:, 0])
     print("Color histogram or R channel")
@@ -119,7 +119,7 @@ def make_voxels(args):
     # This should be less than 254, NOT 255
     # - since we gonna add 0 to our vox file palette. (+1)
     # - and (MAYBE) K-means preserve first index for outliers?
-    n_clusters=254  
+    n_clusters=8  
 
     image_array_sample = shuffle(nonzero_colors, random_state=0, n_samples=min(len(nonzero_colors), 10000))
     kmeans = KMeans(n_clusters=n_clusters, random_state=0).fit(image_array_sample)

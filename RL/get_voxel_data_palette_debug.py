@@ -14,6 +14,7 @@ from PIL import Image
 from importlib import reload as reload
 
 import RLResearch.utils.gen_utils as gu
+import RLResearch.utils.pose_utils as pu
 
 
 reload(svox2)
@@ -24,14 +25,35 @@ from pyvox.writer import VoxWriter
 
 # checkpoint = "/workspace/datasets/TanksAndTempleBG/Truck/ckpt/tt_test/ckpt.npz"
 # checkpoint = "/workspace/datasets/cube_2/ckpt/std/ckpt.npz"
-checkpoint = "/workspace/datasets/dog/ckpt/std/ckpt.npz"
+# checkpoint = "/workspace/datasets/cctv/ckpt/scale_test/ckpt.npz"
+# checkpoint = "/workspace/datasets/cactus/ckpt/std/ckpt.npz"
+
+# checkpoint = "/workspace/datasets/cactus/ckpt/std/ckpt.npz"
+# data_dir = "/workspace/datasets/cactus"
+
+# checkpoint = "/workspace/datasets/_b_shoe_200/ckpt/std/ckpt.npz"
+# data_dir  = "/workspace/datasets/_b_shoe_200"
+
+saturate = True
+saturation_factor = 2.2
 palette_filename = "/workspace/data/vox_palette.png"
+grid_dim = 256
+# Careful with this: SparseGrid wants values in args.json grid range (which could be different from grid_dim)
+
 
 ## ARGPARSE
 parser = argparse.ArgumentParser()
 parser.add_argument("--checkpoint", type=str,default=None, help=".npz checkpoint file")
+parser.add_argument("--data_dir", type=str,default=None, help="Project folder")
+parser.add_argument("--grid_dim", type=int, default = 256, help = "grid_dimension")
+parser.add_argument("--saturate", action="store_false", help="Boost saturation of voxel colors")
 args = parser.parse_args()
 checkpoint = args.checkpoint
+data_dir = args.data_dir
+grid_dim = args.grid_dim
+saturate = args.saturate
+## -----
+
 def data_hist(colors,filename, num_bins = 30, custom_palette = None):
     fig = plt.figure()
     ax = fig.gca()
@@ -51,13 +73,22 @@ def data_hist(colors,filename, num_bins = 30, custom_palette = None):
     print(filename)
     plt.savefig(filename, format='png')
 
+def filter_sphere(color_labels, grid_points, center = torch.tensor([0, 0, 0]), radius = 5):
+    """Removes all voxels outside of a spherical boundary"""
+    distance = torch.linalg.norm( ( grid_points - torch.tensor([0.5, 0.5, 0.5]))  - center, axis = 1) # grid is centered in the corner, so subtracting (0.5, 0.5, 0.5)
+    outside_indices = (distance > radius).nonzero()
+    outside_indices = outside_indices[:,0]
+    
+    color_labels[outside_indices] = 0
+    return color_labels
 
 
+    return filtered_color_labels
 def load_palette(filename):
     pili = Image.open(filename)
     return np.asarray(pili)
 
-def colorize_using_palette(density, color, add_half = False, add_offset = True, thres = 0, color_factor = None):
+def colorize_using_palette(density, color, add_half = False, add_offset = True, thres = 0, color_factor = None, saturate=False, saturation_factor = 1.6):
     #  ------- Filtering ------
     # Density thresholding
     # thres = 0
@@ -91,6 +122,24 @@ def colorize_using_palette(density, color, add_half = False, add_offset = True, 
     pos_d_neg_c_ind = torch.logical_and(positive_dens_bool, negative_color_bool).nonzero()
     pos_d_pos_c_ind = torch.logical_and(positive_dens_bool, positive_color_bool).nonzero()
     filtered_colors = color[filtered_indices, :]
+
+    if saturate:
+        def saturate_color(color, saturation_factor = 1.3):
+            """color is (3,) numpy array"""
+            import colorsys
+            hsv = np.array(colorsys.rgb_to_hsv(color[0], color[1], color[2]))
+            hsv = hsv * np.array([1, saturation_factor, 1]) # Multiply saturation by value. Leave the rest untouched
+            color = colorsys.hsv_to_rgb(hsv[0], hsv[1], hsv[2])
+            # return np.clip(np.array(color), 0, 1) # Probably done inside the library (didn't see any difference)
+            return np.array(color)
+        
+        processed_colors = np.zeros((filtered_colors.shape[0], filtered_colors.shape[1]))
+        filtered_colors_np = filtered_colors.detach().numpy()
+
+        for i in range(0, filtered_colors.shape[0]):           
+            processed_colors[i, :] = saturate_color(filtered_colors[i,:].detach().numpy(), saturation_factor = saturation_factor)
+
+        filtered_colors = torch.tensor(processed_colors, device=device, dtype=torch.float32)
 
     filtered_density = density[pos_dens_ind,0]
     # filtered_points = grid_points[positive_dens_bool[:,0], ...]
@@ -189,10 +238,10 @@ def colorize_pos_neg(density, color, thres = 0, add_offset = True):
 
     return color_labels, vox_pal
 
-def colorize_using_classifier(density, color):
+def colorize_using_classifier(density, color, thres = 0):
     #  ------- Filtering ------
     # Density thresholding
-    thres = 0
+    # thres = 0
     positive_dens_bool = density[:,0] > thres
     negative_dens_bool = torch.logical_not(positive_dens_bool)
     pos_dens_ind = positive_dens_bool.nonzero()
@@ -207,7 +256,7 @@ def colorize_using_classifier(density, color):
     positive_color_bool = positive_components.all(axis=1)
     negative_color_bool = torch.logical_not(positive_color_bool)
 
-    # Join (AND) the positive densities with the positive colors (why are they negative?)
+    # Join (logical AND) the positive densities with the positive colors (why are they negative?)
 
     filtered_indices = torch.logical_and(positive_dens_bool, positive_color_bool).nonzero() 
     # Filtering either negative colors or negative densities.
@@ -328,12 +377,12 @@ grid = SparseGrid.load(checkpoint, device)
 # density, color = grid.sample(data_point)
 
 # Grid
-grid_dim = 250
+# It would be ideal if grid_dim is the same or multiple of training grid. But not strictly necessary?
 grid_res = torch.tensor([grid_dim, grid_dim, grid_dim])
 
-xx = torch.linspace(0, grid.links.shape[0],grid_res[0] )
-yy = torch.linspace(0, grid.links.shape[1],grid_res[1] )
-zz = torch.linspace(0, grid.links.shape[2],grid_res[2] )
+xx = torch.linspace(0, grid.links.shape[0] - 1 , grid_res[0] )
+yy = torch.linspace(0, grid.links.shape[1] - 1 , grid_res[1] )
+zz = torch.linspace(0, grid.links.shape[2] - 1 , grid_res[2] )
 
 grid_mesh = torch.meshgrid(xx, yy, zz)
 grid_points = torch.cat((grid_mesh[0][...,None], grid_mesh[1][...,None], grid_mesh[2][...,None]), 3)
@@ -394,10 +443,33 @@ print(color.shape)
 
 color = utils.SH_C0 * color # Take only albedo component
 
-color_labels, vox_pal = colorize_using_palette(density, color, thres = 0,  add_half = True, color_factor=0.9)
+
+color_labels, vox_pal = colorize_using_palette(density, color, thres = 0,  add_half = True, color_factor=0.9, saturate=True, saturation_factor = saturation_factor)
+
 # color_labels, vox_pal = colorize_pos_neg(density, color, thres = 0)
 
-output_path  = "/workspace/data/test_color_%s.vox"%datetime.now().isoformat().replace(':', '_')
+# Filter with boundary
+sphere_filter_factor = 0.35 # Percentage of bounding box
+color_labels = filter_sphere(color_labels, 
+                                    grid_points / (grid.shape[0] - 1 ), # grid_points are in grid_coord. I'm normalizing here (assuming square grid)
+                                    center = torch.tensor([0, 0, 0]),
+                                    radius = sphere_filter_factor)
+
+# output_path  = "/workspace/data/test_color_%s.vox"%datetime.now().isoformat().replace(':', '_')
+
+# Convert grid to world coordinates and save them in a file
+occupied_points_indices = color_labels.nonzero()[0]
+occupied_grid_points  = grid_points[occupied_points_indices, :]
+occupied_grid_points_centered = grid.grid2world(occupied_grid_points)
+occupied_grid_points_centered = occupied_grid_points_centered.cpu().numpy()
+
+voxel_point_path = Path(data_dir)/"project_files"/"voxel_points.npy"
+np.save(str(voxel_point_path.resolve()), occupied_grid_points_centered )
+print("Saved voxel points to ", voxel_point_path)
+
+result_folder = Path(data_dir)/"result"/"voxel"
+result_folder.mkdir(exist_ok=True, parents=True)
+output_path = result_folder/"vox.vox"
 
 # color_labels, vox_pal, color_bars = colorize_using_density(
 #                                                     density, 

@@ -26,7 +26,7 @@ def data_hist(colors,filename, num_bins = 30):
     plt.savefig(filename, format='png')
     
 
-checkpoint = "/workspace/leo_test/lamp/ckpt/ckpt.npz"
+checkpoint = "/workspace/datasets/cactus/ckpt/std/ckpt.npz"
 cuda_device = 1
 grid = SparseGrid.load(checkpoint, cuda_device)
 

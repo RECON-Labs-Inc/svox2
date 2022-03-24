@@ -85,7 +85,7 @@ class NSVFDataset(DatasetBase):
         pose_dir_name = look_for_dir(["poses", "pose"])
         #  intrin_dir_name = look_for_dir(["intrin"], required=False)
         img_files = sorted(os.listdir(path.join(root, img_dir_name)), key=sort_key)
-
+        
         # Select subset of files
         if self.split == "train":
             img_files = [x for x in img_files if x.startswith("0_")]
@@ -162,7 +162,7 @@ class NSVFDataset(DatasetBase):
 
             # Select subset of files
             T, sscale = similarity_from_cameras(norm_poses)
-
+            nsvf_recenter_matrix = T
             self.c2w_f64 = torch.from_numpy(T) @ self.c2w_f64
             scene_scale = cam_scale_factor * sscale
 
@@ -173,32 +173,6 @@ class NSVFDataset(DatasetBase):
             #  print('good', self.c2w_f64[:2], scene_scale)
 
         print('scene_scale', scene_scale)
-        
-        ## Write to cam_json!
-        cam_filename = Path(root)/"project_files"/"cam_data.json"
-        camera_dict = json.load(open(str(cam_filename.resolve())))
-        
-        def write_json(cam_filename):
-            with open( str(cam_filename.resolve()), "w") as f:
-                json.dump(camera_dict, f)
-                print("Wrote camera data to ",str(cam_filename.resolve()))
-
-        if "scale_factor" in camera_dict.keys():
-            print("Camera json file already has scale_factor:", camera_dict["scale_factor"])
-            print("Current scale factor", scene_scale)
-
-        ## Write to cam_json!
-        cam_filename = Path(root)/"project_files"/"cam_data.json"
-        camera_dict = json.load(open(str(cam_filename.resolve())))
-        
-        def write_json(cam_filename):
-            with open( str(cam_filename.resolve()), "w") as f:
-                json.dump(camera_dict, f)
-                print("Wrote camera data to ",str(cam_filename.resolve()))
-
-        if "scale_factor" in camera_dict.keys():
-            print("Camera json file already has scale_factor:", camera_dict["scale_factor"])
-            print("Current scale factor", scene_scale)
 
         ## Write to cam_json!
         cam_filename = Path(root)/"project_files"/"cam_data.json"
@@ -221,6 +195,23 @@ class NSVFDataset(DatasetBase):
             camera_dict["scale_factor"] = scene_scale
             write_json(cam_filename)
 
+        if "nsvf_recenter_matrix" in camera_dict.keys():
+            print("Camera json already has nsvf_recenter_matrix", camera_dict["nsvf_recenter_matrix"])
+            print("Current nsvf_recenter_matrix", nsvf_recenter_matrix)
+
+            np_current = np.array(nsvf_recenter_matrix)
+            np_written = camera_dict["nsvf_recenter_matrix"]
+
+            if np.array_equal(np_current, np_written) : 
+                print("nsvf_recenter_matrix are different (they should not). Rewriting")
+                camera_dict["nsvf_recenter_matrix"] = nsvf_recenter_matrix.tolist()    
+                write_json(cam_filename)
+
+        else:
+            print("Writing nsvf_recenter_matrix")
+            camera_dict["nsvf_recenter_matrix"] = nsvf_recenter_matrix.tolist()    
+            write_json(cam_filename)
+
         ##camera_dict["scale_factor"] = scene_scale
 
         
@@ -228,7 +219,7 @@ class NSVFDataset(DatasetBase):
         self.c2w_f64[:, :3, 3] *= scene_scale
         self.c2w = self.c2w_f64.float()
 
-        self.gt = torch.stack(all_gt).double() / 255.0
+        self.gt = torch.stack(all_gt).double() / 255.0 ## Code is breaking with no error
 
         print("1, 0")
         if self.gt.size(-1) == 4:
