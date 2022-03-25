@@ -303,7 +303,7 @@ voxel_data_flat = orig_voxel_data.flatten()
 voxel_indices = voxel_data_flat.nonzero()
 mask_result = voxel_data_flat[voxel_indices] # Init
 
-masked_indices = ( (scores - 1.0) < mask_thres_int).nonzero()
+masked_indices = ( (scores - 1.0) < mask_thres_int).nonzero() #Don't remember why this -1.0 was necessary. Sorry. 
 mask_result[masked_indices] = 0
 
 voxel_data_flat[voxel_indices] = mask_result
@@ -314,5 +314,3 @@ vox.palette = original_palette
 output_path = Path(data_dir)/"result"/"vox_masked.vox"
 VoxWriter(str(output_path.resolve()), vox).write()
 print('The Vox file created in ', str(output_path))
-
-a = 5

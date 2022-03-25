@@ -5,7 +5,7 @@ dataset_folder=/workspace/datasets
 # ------- BENCHMARK --------------------
 
 video="/workspace/datasets/nike_shoe.mov"
-dataset='cactus'
+dataset='cctv'
 num_frames=200
 ms_downscale=8
 
@@ -85,13 +85,13 @@ toc.sh $log_file
 
 cd $current_dir
 
-echo
-echo "Mask voxels"
-log_file=$dataset_folder/$dataset/logs/mask_voxels_time.log
+# echo
+# echo "Mask voxels"
+# log_file=$dataset_folder/$dataset/logs/mask_voxels_time.log
 
-tic.sh $log_file
-time python ../voxel_mask.py --checkpoint /workspace/datasets/$dataset/ckpt/std/ckpt.npz --data_dir /workspace/datasets/$dataset --source images
-toc.sh $log_file
+# tic.sh $log_file
+# time python ../voxel_mask.py --checkpoint /workspace/datasets/$dataset/ckpt/std/ckpt.npz --data_dir /workspace/datasets/$dataset --source images
+# toc.sh $log_file
 
 # Toc total time
-toc.sh $dataset_folder/$dataset/logs/total_time_log.log
+# toc.sh $dataset_folder/$dataset/logs/total_time_log.log
