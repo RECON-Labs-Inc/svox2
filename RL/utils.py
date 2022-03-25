@@ -53,6 +53,7 @@ def filter_sphere(color_labels, grid_points, center = torch.tensor([0, 0, 0]), r
 
 
     return filtered_color_labels
+
 def load_palette(filename):
     pili = Image.open(filename)
     return np.asarray(pili)
@@ -334,7 +335,15 @@ def colorize_using_density(density, color, thres = 0, max_density = 1000, debug_
 
     return color_labels, vox_pal, color_bar
 
-# def simple_palette():
-#     """Make the simplest possible palette, with 1 colors. Empty, and gray"""
-#     vox_pal = []
-#     vox_pal.append(Color(0, 0, 0, 255))
+def palette_from_file(filename):
+    """Make the simplest possible palette, with 1 colors. Empty, and gray"""
+    
+    np_palette = load_palette(filename).astype(np.uint8)
+    np_palette = np_palette[0]
+    vox_pal = []
+
+    for c in np_palette:
+        vox_pal.append(Color(c[0], c[1], c[2], 255))
+    
+    return vox_pal
+    

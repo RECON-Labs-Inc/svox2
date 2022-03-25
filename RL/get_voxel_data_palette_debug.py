@@ -18,7 +18,7 @@ from importlib import reload as reload
 import RLResearch.utils.gen_utils as gu
 import RLResearch.utils.pose_utils as pu
 
-from utils import colorize_using_palette, filter_sphere
+from utils import colorize_using_palette, filter_sphere, palette_from_file
 
 reload(svox2)
 from svox2 import *
@@ -150,7 +150,7 @@ filtered_density = density[pos_dens_ind,0]
 
 # Color labels are irrelevant at this stage. We will colorize later. Here, we only care about occupancy.
 color_labels = np.zeros((grid_dim*grid_dim*grid_dim))
-color_labels[filtered_indices.cpu().numpy()] = 1 # first index of palette, else is zero
+color_labels[filtered_indices.cpu().numpy()] = 2 # first index of palette, else is zero
 
 # Filter with spherical boundary
 sphere_filter_factor = 0.35 # Percentage of bounding box
@@ -159,8 +159,10 @@ color_labels = filter_sphere(color_labels,
                                     center = torch.tensor([0, 0, 0]),
                                     radius = sphere_filter_factor)
 
-vox_pal = []
-vox_pal.append(Color(128, 128, 128, 255))
+vox_pal = palette_from_file("/workspace/data/vox_palette.png")
+# vox_pal.append(Color(0, 0, 0, 255))
+# vox_pal.append(Color(128, 128, 128, 255))
+# vox_pal.append(Color(255, 0, 0, 255))
 
 vox = Vox.from_dense(color_labels.astype(np.uint8).reshape(grid_dim, grid_dim, grid_dim))
 vox.palette = vox_pal

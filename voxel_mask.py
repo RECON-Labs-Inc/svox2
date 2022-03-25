@@ -50,7 +50,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--checkpoint", type=str,default=None, help=".npz checkpoint file")
 parser.add_argument("--data_dir", type=str,default=None, help="Project folder")
 parser.add_argument("--grid_dim", type=int, default = 256, help = "grid_dimension")
-parser.add_argument("--vox_file", type=str, default = None, help = "Voxel file to be masked")
+# parser.add_argument("--vox_file", type=str, default = None, help = "Voxel file to be masked")
 parser.add_argument("--source", type=str, default = "images_undistorted", help = "subfolder where images are located")
 args = parser.parse_args()
 checkpoint_path = Path(args.checkpoint)
@@ -77,13 +77,13 @@ device = "cuda:0" if torch.cuda.is_available() else "cpu"
 # Load arguments from json
 # json_config_path = Path(data_dir)/"ckpt"/exp_name/"args.json"
 
-# Doesn't seem necessary to actually load the dataset.
-dataset = datasets["nsvf"](
-            data_dir,
-            split="test_train",
-            device=device,
-            factor=1,
-            n_images=None)
+# # Doesn't seem necessary to actually load the dataset.
+# dataset = datasets["nsvf"](
+#             data_dir,
+#             split="test_train",
+#             device=device,
+#             factor=1,
+#             n_images=None)
 
 grid = SparseGrid.load(str(checkpoint_path.resolve()))
 # config_util.setup_render_opts(grid.opt, args)
@@ -122,10 +122,10 @@ image_path = Path(data_dir)/"source"/source
 mask_subset = []
 
 num_masks = 20
-print("Number of images ", len(dataset.c2w))
+print("Number of images ", poses.shape[0])
 print("num_masks", num_masks)
 
-subset = range(0, len(dataset.c2w), int(len(dataset.c2w)/num_masks))
+subset = range(0, poses.shape[0], int(poses.shape[0]/num_masks))
 
 if image_path.exists() is False:
         raise FileNotFoundError(image_path, "does not exist")
@@ -142,19 +142,33 @@ else:
         #         mask = remove_backround(pili)
         #         mask_subset.append(np.asarray(mask))
 
-subset = range(0, len(dataset.c2w), int(len(dataset.c2w)/num_masks))
+subset = range(0, poses.shape[0], int(poses.shape[0]/num_masks))
 
 # mask_subset = []
 c2w_subset = []
 
 dilate_image = True
 dilatation_size = 25
-
+downsample = True
 for ind in subset:
         #Compute mask here based on file list.
         print(str(ind), image_path_list[ind])
         pili = Image.open(str(image_path_list[ind].resolve()))
-        mask = remove_backround(pili)
+        max_dimension = max((pili.width, pili.height))
+        if downsample is True:
+                if max_dimension >= 3840:
+                        mask_downsample = 4
+                elif max_dimension >= 1920:
+                        mask_downsample = 2
+                else:
+                        mask_downsample = 1
+        
+                pili = pili.resize( ( int(pili.width/mask_downsample), int(pili.height/mask_downsample) ))
+                mask = remove_backround(pili)
+                mask = mask.resize( (mask.width * mask_downsample, mask.height * mask_downsample) )
+        else:
+                mask = remove_backround(pili)
+
         mask = mask.split()[-1]
         mask = np.asarray(mask)
         # mask_subset.append(np.asarray(mask))
@@ -198,11 +212,17 @@ for mask_image, c2w in zip(mask_subset, c2w_subset):
         w2c = torch.linalg.inv(c2w)
 
         # --- MAke camera matrix
-        height, width = dataset.get_image_size(ind)
-        fx = dataset.intrins.get('fx', ind)
-        fy = dataset.intrins.get('fy', ind)
-        cx = dataset.intrins.get('cx', ind)
-        cy = dataset.intrins.get('cy', ind)
+        height = camera_dict["calibration"]["h"]
+        width = camera_dict["calibration"]["w"]
+        # fx = dataset.intrins.get('fx', ind)
+        # fy = dataset.intrins.get('fy', ind)
+        # cx = dataset.intrins.get('cx', ind)
+        # cy = dataset.intrins.get('cy', ind)
+
+        fx = camera_dict["calibration"]["f"]
+        fy = fx
+        cx = camera_dict["calibration"]["w"]/2
+        cy = camera_dict["calibration"]["h"]/2
 
         cam_matrix = torch.tensor([ [fx, 0, cx],
                                 [0, fy, cy],
