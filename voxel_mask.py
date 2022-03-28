@@ -44,6 +44,8 @@ sys.path.append("/workspace/aseeo-research")
 import RLResearch.utils.depth_utils as du
 import RLResearch.utils.gen_utils as gu
 
+import RL.utils
+
 
 # ## ARGPARSE
 parser = argparse.ArgumentParser()
@@ -85,7 +87,7 @@ device = "cuda:0" if torch.cuda.is_available() else "cpu"
 #             factor=1,
 #             n_images=None)
 
-grid = SparseGrid.load(str(checkpoint_path.resolve()))
+# grid = SparseGrid.load(str(checkpoint_path.resolve()))
 # config_util.setup_render_opts(grid.opt, args)
 # print('Render options', grid.opt)
 
@@ -119,9 +121,8 @@ poses = np.array(camera_dict["ms_poses"])
 #                 masks.append(np.asarray(pili))
 
 image_path = Path(data_dir)/"source"/source
-mask_subset = []
 
-num_masks = 20
+num_masks = 2
 print("Number of images ", poses.shape[0])
 print("num_masks", num_masks)
 
@@ -143,41 +144,44 @@ else:
         #         mask_subset.append(np.asarray(mask))
 
 subset = range(0, poses.shape[0], int(poses.shape[0]/num_masks))
+source_image_filenames = [image_path_list[x] for x in subset]
 
-# mask_subset = []
+mask_subset = RL.utils.make_masks(source_image_filenames, save_folder = Path(data_dir)/"source"/"mask")
 c2w_subset = []
 
 dilate_image = True
 dilatation_size = 25
 downsample = True
+
+
 for ind in subset:
         #Compute mask here based on file list.
-        print(str(ind), image_path_list[ind])
-        pili = Image.open(str(image_path_list[ind].resolve()))
-        max_dimension = max((pili.width, pili.height))
-        if downsample is True:
-                if max_dimension >= 3840:
-                        mask_downsample = 4
-                elif max_dimension >= 1920:
-                        mask_downsample = 2
-                else:
-                        mask_downsample = 1
+        # print(str(ind), image_path_list[ind])
+        # pili = Image.open(str(image_path_list[ind].resolve()))
+        # max_dimension = max((pili.width, pili.height))
+        # if downsample is True:
+        #         if max_dimension >= 3840:
+        #                 mask_downsample = 4
+        #         elif max_dimension >= 1920:
+        #                 mask_downsample = 2
+        #         else:
+        #                 mask_downsample = 1
         
-                pili = pili.resize( ( int(pili.width/mask_downsample), int(pili.height/mask_downsample) ))
-                mask = remove_backround(pili)
-                mask = mask.resize( (mask.width * mask_downsample, mask.height * mask_downsample) )
-        else:
-                mask = remove_backround(pili)
+        #         pili = pili.resize( ( int(pili.width/mask_downsample), int(pili.height/mask_downsample) ))
+        #         mask = remove_backround(pili)
+        #         mask = mask.resize( (mask.width * mask_downsample, mask.height * mask_downsample) )
+        # else:
+        #         mask = remove_backround(pili)
 
-        mask = mask.split()[-1]
-        mask = np.asarray(mask)
-        # mask_subset.append(np.asarray(mask))
+        # mask = mask.split()[-1]
+        # mask = np.asarray(mask)
+        # # mask_subset.append(np.asarray(mask))
 
-        if dilate_image:
-                mask = gu.dilate_image( mask, dilatation_size= dilatation_size)
-                mask_subset.append(mask)
-        else:       
-                mask_subset.append(masks[ind])
+        # if dilate_image:
+        #         mask = gu.dilate_image( mask, dilatation_size= dilatation_size)
+        #         mask_subset.append(mask)
+        # else:       
+        #         mask_subset.append(masks[ind])
 
         c2w = poses[ind, ...]
         c2w_subset.append(c2w)
@@ -185,6 +189,7 @@ for ind in subset:
 ### --- LOAD points from npy file
 voxel_npy_path = Path(data_dir)/"project_files"/"voxel_points.npy"
 occupied_points_centered = np.load(str(voxel_npy_path.resolve()))
+occupied_points_centered_orig = occupied_points_centered
 occupied_points_centered = torch.tensor(occupied_points_centered, device = device, dtype=torch.float64)
 
 # Rescale position
@@ -199,81 +204,35 @@ occupied_points_world = inv_recenter_matrix.double() @ occupied_points_centered
 num_voxels = occupied_points_world.shape[1]
 print(num_voxels)
 
-i = 0
-scores = torch.zeros(num_voxels, device=device)
-for mask_image, c2w in zip(mask_subset, c2w_subset):
+fill = True
 
-        # Convert to tensor
-        mask_image = torch.tensor(mask_image, device = device)
-        c2w =  torch.tensor(c2w, device = device, dtype=torch.float64) 
-
-        # World to camera
-
-        w2c = torch.linalg.inv(c2w)
-
-        # --- MAke camera matrix
-        height = camera_dict["calibration"]["h"]
-        width = camera_dict["calibration"]["w"]
-        # fx = dataset.intrins.get('fx', ind)
-        # fy = dataset.intrins.get('fy', ind)
-        # cx = dataset.intrins.get('cx', ind)
-        # cy = dataset.intrins.get('cy', ind)
-
-        fx = camera_dict["calibration"]["f"]
-        fy = fx
-        cx = camera_dict["calibration"]["w"]/2
-        cy = camera_dict["calibration"]["h"]/2
-
-        cam_matrix = torch.tensor([ [fx, 0, cx],
-                                [0, fy, cy],
-                                [0,  0, 1 ]], device = device)
-
-        # --- Project to mask: (1) World to cam, then (2) Project into viewport with cam matrix
-        occupied_points_cam = w2c @ occupied_points_world
-        occupied_points_projected = cam_matrix.double() @ occupied_points_cam[:3,:]
-        occupied_points_projected = occupied_points_projected[:2, :]/occupied_points_projected[2, :] # Divide by z to get coords.
-        projected_indices = occupied_points_projected.type(torch.long)
-
-        projected_indices_x = projected_indices[0,:]
-        projected_indices_y = projected_indices[1,:]
-
-        projected_indices_x_clamped = projected_indices[0,:].clamp(0, width-1) # This is not the proper way to deal with out of bounds this
-        projected_indices_y_clamped = projected_indices[1,:].clamp(0, height-1)
+if fill is True:
+        grid_path = Path(data_dir)/"project_files"/"grid_points_world.npy"
+        full_block = np.load(str(grid_path.resolve()))
+        # grid_world = 
 
 
-        masked_results = mask_image[projected_indices_y_clamped,  projected_indices_x_clamped] # Swapped x y attention!
-        scores += masked_results
+# --- Make camera matrix
+height = camera_dict["calibration"]["h"]
+width = camera_dict["calibration"]["w"]
 
-        mask_thres = 0.5
-        mask_thres_int = mask_thres * 255
-        mask_thres_int = int(mask_thres_int)
+fx = camera_dict["calibration"]["f"]
+fy = fx
+cx = camera_dict["calibration"]["w"]/2
+cy = camera_dict["calibration"]["h"]/2
 
-        # masked_values = torch.
-        masked_indices = (masked_results < mask_thres_int).nonzero()
-        mask_result = torch.ones(occupied_points_projected.shape[1]) * 8 # Just using 8 as a random color
-        mask_result[masked_indices] = 99
+cam_matrix = torch.tensor([ [fx, 0, cx],
+                        [0, fy, cy],
+                        [0,  0, 1 ]], device = device)
 
-        voxel_data_flat = voxel_data.flatten()
-        voxel_indices = voxel_data_flat.nonzero()
-        voxel_indices = voxel_indices[0]
-        voxel_data_flat[voxel_indices] = mask_result.cpu().numpy()
-
-        # Rewrite voxel data
-        voxel_data = voxel_data_flat.reshape(voxel_data.shape)
-        vox = Vox.from_dense(voxel_data)
-        # vox.palette = 
-        # p_projected = p_projected
-
-        # output_path = "/workspace/data/vox_mask_"+str(i)+".vox"
-        output_path=Path(data_dir)/"result"/"voxel"/("vox_mask_"+str(i)+".vox")
-        VoxWriter(output_path, vox).write()
-        print('The Vox file created in ', str(output_path))
-        
-        i+=1
-
-# Divede by number of masks to normalize to range 255
-scores = scores / len(subset)
-
+scores, mask_result = RL.utils.mask_points(voxel_data, 
+        occupied_points_world, 
+        mask_subset, 
+        c2w_subset,
+        cam_matrix,
+        device = device,
+        debug_dir= str( ( Path(data_dir)/"result"/"voxel" ).resolve() ) 
+        )
 # Make a palette based on the score
 from matplotlib import cm
 from matplotlib.colors import ListedColormap, LinearSegmentedColormap
@@ -334,3 +293,11 @@ vox.palette = original_palette
 output_path = Path(data_dir)/"result"/"vox_masked.vox"
 VoxWriter(str(output_path.resolve()), vox).write()
 print('The Vox file created in ', str(output_path))
+
+# Now export the points of the new voxels
+output_path_points = Path(data_dir)/"result"/"vox_masked_points.npy"
+np.save( str(output_path_points.resolve()), occupied_points_centered_orig[voxel_indices] )
+
+
+
+

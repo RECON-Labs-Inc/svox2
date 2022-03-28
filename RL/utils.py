@@ -12,6 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 from importlib import reload as reload
+from rembg.bg import remove as remove_backround
 
 import RLResearch.utils.gen_utils as gu
 import RLResearch.utils.pose_utils as pu
@@ -346,4 +347,149 @@ def palette_from_file(filename):
         vox_pal.append(Color(c[0], c[1], c[2], 255))
     
     return vox_pal
+
+def make_grid(grid_dim):
+
+    grid_res = torch.tensor([grid_dim, grid_dim, grid_dim])
+
+    xx = torch.linspace(0, grid.links.shape[0] - 1 , grid_res[0] )
+    yy = torch.linspace(0, grid.links.shape[1] - 1 , grid_res[1] )
+    zz = torch.linspace(0, grid.links.shape[2] - 1 , grid_res[2] )
+
+    grid_mesh = torch.meshgrid(xx, yy, zz)
+    grid_points = torch.cat((grid_mesh[0][...,None], grid_mesh[1][...,None], grid_mesh[2][...,None]), 3)
+    num_voxels = grid_points.shape[0] * grid_points.shape[1] * grid_points.shape[2]
+    grid_points = grid_points.reshape((num_voxels, 3))
+    grid_points = torch.tensor(grid_points, device=device, dtype=torch.float32)
+
+    return grid_points
+
+def prepare_points(tensor, scale_factor, inv_recenter_matrix, device = "cuda:0"):
+    # Untested
+    tensor = torch.tensor(tensor, device = device, dtype=torch.float64)
+
+    # Rescale position
+    tensor *= (1.0/scale_factor)
+    ones = torch.ones((1, tensor.shape[0]), device=device)
+    tensor = torch.cat((tensor.T, ones))
+
+    # Convert to world
+    tensor_world = inv_recenter_matrix.double() @ tensor
+
+    return tensor_world
+
+
+
+def mask_points(voxel_data, occupied_points_world, mask_subset, c2w_subset, cam_matrix, device = "cuda:0", debug_dir = None):
+        """ Masks voxels (voxel_data) according to their position (occuped_points_world) 
+        using masks (mask_subset) at view_points(c2w_subset). Projects the points into each mask 
+        and checks if the point should be masked. Return a score by averaging the mask value from all masks"""
+
+        num_voxels = occupied_points_world.shape[1]
+        i = 0
+        scores = torch.zeros(num_voxels, device=device) # init score matrix
+        for mask_image, c2w in zip(mask_subset, c2w_subset):
+
+                # Convert to tensor
+                mask_image = torch.tensor(mask_image, device = device)
+                c2w =  torch.tensor(c2w, device = device, dtype=torch.float64) 
+
+                # World to camera
+                w2c = torch.linalg.inv(c2w)
+
+                
+                # --- Project to mask: (1) World to cam, then (2) Project into viewport with cam matrix
+                occupied_points_cam = w2c @ occupied_points_world
+                occupied_points_projected = cam_matrix.double() @ occupied_points_cam[:3,:]
+                occupied_points_projected = occupied_points_projected[:2, :]/occupied_points_projected[2, :] # Divide by z to get coords.
+                projected_indices = occupied_points_projected.type(torch.long)
+
+                projected_indices_x = projected_indices[0,:]
+                projected_indices_y = projected_indices[1,:]
+
+                height, width = mask_image.shape
+
+                projected_indices_x_clamped = projected_indices[0,:].clamp(0, width-1) # This is not the proper way to deal with out of bounds this
+                projected_indices_y_clamped = projected_indices[1,:].clamp(0, height-1)
+
+
+                masked_results = mask_image[projected_indices_y_clamped,  projected_indices_x_clamped] # Swapped x y attention!
+                scores += masked_results
+
+                mask_thres = 0.5
+                mask_thres_int = mask_thres * 255
+                mask_thres_int = int(mask_thres_int)
+
+                # masked_values = torch.
+                masked_indices = (masked_results < mask_thres_int).nonzero()
+                mask_result = torch.ones(occupied_points_projected.shape[1]) * 8 # Just using 8 as a random color
+                mask_result[masked_indices] = 99
+
+                voxel_data_flat = voxel_data.flatten()
+                voxel_indices = voxel_data_flat.nonzero()
+                voxel_indices = voxel_indices[0]
+                voxel_data_flat[voxel_indices] = mask_result.cpu().numpy()
+
+                # Rewrite voxel data
+                voxel_data = voxel_data_flat.reshape(voxel_data.shape)
+                vox = Vox.from_dense(voxel_data)
+                # vox.palette = 
+                # p_projected = p_projected
+
+                # output_path = "/workspace/data/vox_mask_"+str(i)+".vox"
+
+                if debug_dir is not None:
+                        output_path=Path(debug_dir)/("vox_mask_"+str(i)+".vox")
+                        VoxWriter(output_path, vox).write()
+                        print('The Vox file created in ', str(output_path))
+                
+                i+=1
+
+        # Divede by number of masks to normalize to range 255
+        scores = scores / len(mask_subset)
+        
+        return scores, mask_result
+
+
+def make_masks(source_image_filenames, downsample = False, save_folder = None):
+    """Makes masks from filenames. Returns a list of masks"""
     
+    dilate_image = True
+    dilatation_size = 25
+    downsample = True
+    masks = []
+    # i = 0
+    for source_image, ind  in zip(source_image_filenames, range(0, len(source_image_filenames))):
+    # for ind in subset:
+        #Compute mask here based on file list.
+        print(str(ind), str(source_image))
+        pili = Image.open(source_image)
+        max_dimension = max((pili.width, pili.height))
+        if downsample is True:
+                if max_dimension >= 3840:
+                        mask_downsample = 4
+                elif max_dimension >= 1920:
+                        mask_downsample = 2
+                else:
+                        mask_downsample = 1
+        
+                pili = pili.resize( ( int(pili.width/mask_downsample), int(pili.height/mask_downsample) ))
+                mask = remove_backround(pili)
+                mask = mask.resize( (mask.width * mask_downsample, mask.height * mask_downsample) )
+        else:
+                mask = remove_backround(pili)
+
+        mask = mask.split()[-1]
+        mask = np.asarray(mask)
+        # mask_subset.append(np.asarray(mask))
+
+        if dilate_image:
+                mask = gu.dilate_image( mask, dilatation_size= dilatation_size)
+                
+        masks.append(mask)
+
+        if save_folder is not None:
+            im = Image.fromarray(mask)
+            im.save(source_image)
+
+    return masks
