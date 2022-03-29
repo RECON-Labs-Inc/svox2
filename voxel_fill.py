@@ -49,32 +49,20 @@ import RL.utils
 
 # ## ARGPARSE
 parser = argparse.ArgumentParser()
-parser.add_argument("--vox_file", type = str, default=None,  help="Vox file to be masked")
 parser.add_argument("--checkpoint", type=str,default=None, help=".npz checkpoint file")
 parser.add_argument("--data_dir", type=str,default=None, help="Project folder")
 parser.add_argument("--grid_dim", type=int, default = 256, help = "grid_dimension")
-parser.add_argument("--num_masks", type=int, default = 20, help = "grid_dimension")
 # parser.add_argument("--vox_file", type=str, default = None, help = "Voxel file to be masked")
 parser.add_argument("--source", type=str, default = "images_undistorted", help = "subfolder where images are located")
 parser.add_argument("--use_block", action="store_true" ,  help = "Use block")
-parser.add_argument("--mask_thres", type=float , default=0.5,  help = "Values less than mask_thres will be masked")
 args = parser.parse_args()
 checkpoint_path = Path(args.checkpoint)
 data_dir = args.data_dir
 grid_dim = args.grid_dim
-
-if args.vox_file is None:
-        vox_file = Path(data_dir)/"result"/"voxel"/"vox.vox"
-        vox_file = str(vox_file.resolve())
-else:
-        vox_file = args.vox_file
-
+vox_file = Path(data_dir)/"result"/"voxel"/"vox.vox"
+vox_file = str(vox_file.resolve())
 source = args.source
 use_block = args.use_block
-num_masks = args.num_masks
-mask_thres = args.mask_thres
-
-
 
 # #----
 # print("Running the no argument version")
@@ -111,15 +99,11 @@ m = VoxParser(vox_file).parse()
 voxel_data = m.to_dense()
 orig_voxel_data = voxel_data
 original_palette = m.palette
-
 if use_block:
-        print("SCULPTING BLOCK")
         # Make bounding block to be sculpted
         indices = np.array(voxel_data.nonzero())
         mins = np.amin(indices, axis=1)
         maxs = np.amax(indices, axis=1)
-        print(mins)
-        print(maxs)
 
         block = np.zeros_like(voxel_data)
         block[mins[0]:maxs[0],mins[1]:maxs[1],mins[2]:maxs[2] ] = 1
@@ -150,6 +134,7 @@ poses = np.array(camera_dict["ms_poses"])
 
 image_path = Path(data_dir)/"source"/source
 
+num_masks = 2
 print("Number of images ", poses.shape[0])
 print("num_masks", num_masks)
 
@@ -180,17 +165,16 @@ for ind in subset:
         c2w = poses[ind, ...]
         c2w_subset.append(c2w)
 
+voxel_npy_path = Path(data_dir)/"project_files"/"grid_points_world.npy"
+flat_world_points = np.load(str(voxel_npy_path.resolve()))
+occupied_points_centered = flat_world_points[block_flat.nonzero()]
+occupied_points_centered = torch.tensor(occupied_points_centered, device = device, dtype=torch.float64)
+
+
 ### --- LOAD points from npy file
-# if use_block:
-        voxel_npy_path = Path(data_dir)/"project_files"/"grid_points_world.npy"
-        flat_world_points = np.load(str(voxel_npy_path.resolve()))
-        # occupied_points_centered = flat_world_points[block_flat.nonzero()]
-        occupied_points_centered = flat_world_points[voxel_data.flatten().nonzero()]
-        occupied_points_centered = torch.tensor(occupied_points_centered, device = device, dtype=torch.float64)
-# else:
-#         voxel_npy_path = Path(data_dir)/"project_files"/"voxel_points.npy"
-#         occupied_points_centered = np.load(str(voxel_npy_path.resolve()))
-#         occupied_points_centered = torch.tensor(occupied_points_centered, device = device, dtype=torch.float64)
+# voxel_npy_path = Path(data_dir)/"project_files"/"voxel_points.npy"
+# occupied_points_centered = np.load(str(voxel_npy_path.resolve()))
+# occupied_points_centered = torch.tensor(occupied_points_centered, device = device, dtype=torch.float64)
 
 # Rescale position
 occupied_points_centered *= (1.0/scale_factor)
@@ -203,6 +187,14 @@ occupied_points_world = inv_recenter_matrix.double() @ occupied_points_centered
 
 num_voxels = occupied_points_world.shape[1]
 print(num_voxels)
+
+fill = True
+
+if fill is True:
+        grid_path = Path(data_dir)/"project_files"/"grid_points_world.npy"
+        full_block = np.load(str(grid_path.resolve()))
+        # grid_world = 
+
 
 # --- Make camera matrix
 height = camera_dict["calibration"]["h"]
@@ -217,7 +209,7 @@ cam_matrix = torch.tensor([ [fx, 0, cx],
                         [0, fy, cy],
                         [0,  0, 1 ]], device = device)
 
-scores, mask_result = RL.utils.mask_points(voxel_data, 
+scores, mask_result = RL.utils.mask_points(block, 
         occupied_points_world, 
         mask_subset, 
         c2w_subset,
@@ -265,7 +257,7 @@ print('The Vox file created in ', str(output_path))
 
 # Now filter based on threshold
 
-# mask_thres = 0.5
+mask_thres = 0.5
 mask_thres_int = mask_thres * 255
 mask_thres_int = int(mask_thres_int)
 
@@ -282,10 +274,6 @@ voxel_data_flat[voxel_indices] = mask_result
 vox = Vox.from_dense(voxel_data_flat.reshape(voxel_data.shape))
 vox.palette = original_palette
 
-if use_block:
-        output_path = Path(data_dir)/"result"/"vox_masked_block.vox"
-else:
-        output_path = Path(data_dir)/"result"/"vox_masked.vox"
-
+output_path = Path(data_dir)/"result"/"vox_masked.vox"
 VoxWriter(str(output_path.resolve()), vox).write()
 print('The Vox file created in ', str(output_path))
