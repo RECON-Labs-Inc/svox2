@@ -191,13 +191,6 @@ grid_points_path = Path(data_dir)/"project_files"/"grid_points.npy"
 np.save(str(grid_points_path.resolve()), grid_points_world )
 print("Saved grid points to ", grid_points_path)
 
-
-# # Save bounding block (sculpting block)
-# mins = np.amin(occupied_grid_points.cpu().numpy(), axis=0)
-# maxs = np.amax(occupied_grid_points.cpu().numpy(), axis = 0)
-
-# bounding_block = grid_
-
 grid_data = {}
 grid_data["color"] = color
 grid_data["density"] = density
