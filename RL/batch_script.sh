@@ -17,18 +17,19 @@
 # datasets=("cactus"  "cctv"  "dog" "tangerine" "pen_cup_2")
 
 # datasets=("_req_plant _req_abalone")
-datasets=("_req_plant_low")
-grid_dims=("256" "128" "64")
+datasets=("_b_cctv_130" "_b_shoe_200" "_b_cactus_130")
+# grid_dims=("256" "128" "64")
 
 
 for dataset in ${datasets[@]}; do
+  ./voxelizing_pipeline.sh sdfsdf $dataset
   # COPY_DIR=/workspace/data/mask_$dataset
   # mkdir $COPY_DIR
   # cp /workspace/datasets/$dataset/result/voxel/vox_mask_debug.vox $COPY_DIR
   # cp /workspace/datasets/$dataset/result/vox_masked.vox $COPY_DIR
 
-  python get_voxel_data_palette_debug.py --checkpoint /workspace/datasets/$dataset/ckpt/std/ckpt.npz --data_dir /workspace/datasets/$dataset
-  python ../voxel_mask.py --checkpoint /workspace/datasets/$dataset/ckpt/std/ckpt.npz --data_dir /workspace/datasets/$dataset
+  # python get_voxel_data_palette_debug.py --checkpoint /workspace/datasets/$dataset/ckpt/std/ckpt.npz --data_dir /workspace/datasets/$dataset
+  # python ../voxel_mask.py --checkpoint /workspace/datasets/$dataset/ckpt/std/ckpt.npz --data_dir /workspace/datasets/$dataset
   # python /workspace/aseeo-research/RLResearch/workflow/mask.py \
   # --image_data_path="/workspace/datasets/$dataset/source/images_undistorted" \
   # --output_folder="/workspace/datasets/$dataset/source/masks"
