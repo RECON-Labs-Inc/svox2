@@ -51,15 +51,17 @@ import RL.utils
 parser = argparse.ArgumentParser()
 parser.add_argument("--vox_file", type = str, default=None,  help="Vox file to be masked")
 parser.add_argument("--ref_vox_file", type = str, default=None,  help="Vox file to be masked")
-parser.add_argument("--checkpoint", type=str,default=None, help=".npz checkpoint file")
+# parser.add_argument("--checkpoint", type=str,default=None, help=".npz checkpoint file")
 parser.add_argument("--data_dir", type=str,default=None, help="Project folder")
 parser.add_argument("--grid_dim", type=int, default = 256, help = "grid_dimension")
 # parser.add_argument("--num_masks", type=int, default = 20, help = "grid_dimension")
 # parser.add_argument("--source", type=str, default = "images_undistorted", help = "subfolder where images are located")
 parser.add_argument("--use_block", action="store_true" ,  help = "Use block")
 # parser.add_argument("--mask_thres", type=float ,  help = "Values less than mask_thres will be masked")
+parser.add_argument("--debug_folder", type=str,default=None, help="debug folder for saving stuff")
+
 args = parser.parse_args()
-checkpoint_path = Path(args.checkpoint)
+# checkpoint_path = Path(args.checkpoint)
 data_dir = args.data_dir
 grid_dim = args.grid_dim
 
@@ -71,21 +73,14 @@ else:
 
 use_block = args.use_block
 ref_vox_file = args.ref_vox_file
+debug_folder = args.debug_folder
 
-print("file", vox_file)
-print("Ref", ref_vox_file)
-# #----
-# print("Running the no argument version")
-# data_dir = "/workspace/datasets/_p_shoe_200_single_pose_dwn_8"
-# exp_name = "std"
-# checkpoint_path = Path(data_dir)/"ckpt"/exp_name/"ckpt.npz"
-# vox_file = "/workspace/datasets/_p_shoe_200_single_pose_dwn_8/result/voxel/vox.vox"
-# grid_dim = 256 # My sampling
-# orig_grid_dim = 640 # Actual grid size of grid from args.json
-# source = "images"
-# # #-----
+
+print("INPUT VOXEL", vox_file )
+print("REF VOXEL", ref_vox_file)
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
+
 # device = "cpu"
 
 # Load arguments from json
@@ -181,5 +176,10 @@ vox.palette = original_palette
 output_path = Path(data_dir)/"result"/"voxel"/"vox_pushed.vox"
 VoxWriter(str(output_path.resolve()), vox).write()
 print('The Vox file created in ', str(output_path))
+
+if debug_folder is not None:
+        Path(debug_folder).mkdir(exist_ok=True, parents=True)
+        VoxWriter( str(Path(debug_folder)/output_path.name), vox).write()
+
 
 

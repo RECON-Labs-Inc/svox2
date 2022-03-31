@@ -53,11 +53,12 @@ parser.add_argument("--vox_file", type = str, default=None,  help="Vox file to b
 parser.add_argument("--checkpoint", type=str,default=None, help=".npz checkpoint file")
 parser.add_argument("--data_dir", type=str,default=None, help="Project folder")
 parser.add_argument("--grid_dim", type=int, default = 256, help = "grid_dimension")
-parser.add_argument("--num_masks", type=int, default = 20, help = "grid_dimension")
+parser.add_argument("--num_masks", type=int, default = 20, help = "number of masks used to mask/sculpt the object")
 # parser.add_argument("--vox_file", type=str, default = None, help = "Voxel file to be masked")
 parser.add_argument("--source", type=str, default = "images_undistorted", help = "subfolder where images are located")
 parser.add_argument("--use_block", action="store_true" ,  help = "Use block")
 parser.add_argument("--mask_thres", type=float , default=0.5,  help = "Values less than mask_thres will be masked")
+parser.add_argument("--debug_folder", type=str,default=None, help="debug folder for saving stuff")
 args = parser.parse_args()
 checkpoint_path = Path(args.checkpoint)
 data_dir = args.data_dir
@@ -69,12 +70,14 @@ if args.vox_file is None:
 else:
         vox_file = args.vox_file
 
+print("INPUT VOXEL", vox_file )
 source = args.source
 use_block = args.use_block
 num_masks = args.num_masks
 mask_thres = args.mask_thres
+debug_folder = args.debug_folder
 
-
+print("MASK THRES" , mask_thres)
 
 # #----
 # print("Running the no argument version")
@@ -181,16 +184,15 @@ for ind in subset:
         c2w_subset.append(c2w)
 
 ### --- LOAD points from npy file
-# if use_block:
-        voxel_npy_path = Path(data_dir)/"project_files"/"grid_points_world.npy"
+if use_block:
+        voxel_npy_path = Path(data_dir)/"project_files"/"grid_points.npy"
         flat_world_points = np.load(str(voxel_npy_path.resolve()))
-        # occupied_points_centered = flat_world_points[block_flat.nonzero()]
         occupied_points_centered = flat_world_points[voxel_data.flatten().nonzero()]
         occupied_points_centered = torch.tensor(occupied_points_centered, device = device, dtype=torch.float64)
-# else:
-#         voxel_npy_path = Path(data_dir)/"project_files"/"voxel_points.npy"
-#         occupied_points_centered = np.load(str(voxel_npy_path.resolve()))
-#         occupied_points_centered = torch.tensor(occupied_points_centered, device = device, dtype=torch.float64)
+else:
+        voxel_npy_path = Path(data_dir)/"project_files"/"voxel_points.npy"
+        occupied_points_centered = np.load(str(voxel_npy_path.resolve()))
+        occupied_points_centered = torch.tensor(occupied_points_centered, device = device, dtype=torch.float64)
 
 # Rescale position
 occupied_points_centered *= (1.0/scale_factor)
@@ -217,13 +219,15 @@ cam_matrix = torch.tensor([ [fx, 0, cx],
                         [0, fy, cy],
                         [0,  0, 1 ]], device = device)
 
+debug_path = Path(data_dir)/"result"/"voxel_block" if use_block else Path(data_dir)/"result"/"voxel"
+debug_path.mkdir(exist_ok=True, parents=True)
 scores, mask_result = RL.utils.mask_points(voxel_data, 
         occupied_points_world, 
         mask_subset, 
         c2w_subset,
         cam_matrix,
         device = device,
-        debug_dir= str( ( Path(data_dir)/"result"/"voxel" ).resolve() ) 
+        debug_dir= None if use_block else str( debug_path.resolve() ) # Blocks are too big
         )
 # Make a palette based on the score
 from matplotlib import cm
@@ -261,11 +265,16 @@ output_path = Path(data_dir)/"result"/"voxel"/"vox_mask_debug.vox"
 VoxWriter(str(output_path.resolve()), vox).write()
 print('The Vox file created in ', str(output_path))
 
+if debug_folder is not None:
+        VoxWriter( str(Path(debug_folder)/"vox_mask_debug.vox"), vox).write()
+        
+
 
 
 # Now filter based on threshold
 
 # mask_thres = 0.5
+print("mask_thres", mask_thres)
 mask_thres_int = mask_thres * 255
 mask_thres_int = int(mask_thres_int)
 
@@ -287,5 +296,12 @@ if use_block:
 else:
         output_path = Path(data_dir)/"result"/"vox_masked.vox"
 
+
+
 VoxWriter(str(output_path.resolve()), vox).write()
 print('The Vox file created in ', str(output_path))
+
+if debug_folder is not None:
+        Path(debug_folder).mkdir(exist_ok=True, parents=True)
+        VoxWriter( str(Path(debug_folder)/output_path.name), vox).write()
+

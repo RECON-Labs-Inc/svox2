@@ -50,11 +50,14 @@ parser.add_argument("--checkpoint", type=str,default=None, help=".npz checkpoint
 parser.add_argument("--data_dir", type=str,default=None, help="Project folder")
 parser.add_argument("--grid_dim", type=int, default = 256, help = "grid_dimension")
 parser.add_argument("--saturate", action="store_true", help="Boost saturation of voxel colors")
+parser.add_argument("--debug_folder", type=str,default=None, help="debug folder for saving stuff")
 args = parser.parse_args()
 checkpoint = args.checkpoint
 data_dir = args.data_dir
 grid_dim = args.grid_dim
 saturate = args.saturate
+debug_folder = args.debug_folder
+
 ## -----
 
 device = "cpu"
@@ -173,6 +176,9 @@ output_path = result_folder/"vox.vox"
 
 print('The Vox file created in ', str(output_path))
 VoxWriter(output_path, vox).write()
+if debug_folder is not None:
+    Path(debug_folder).mkdir(exist_ok=True, parents=True)
+    VoxWriter( str(Path(debug_folder)/"vox.vox"), vox).write()
 
 ## ------- SAVE DENSITY, COLOR AND POINTS (COORDS) ----
 # Convert grid to world coordinates and save them in a file

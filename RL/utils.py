@@ -59,51 +59,16 @@ def load_palette(filename):
     pili = Image.open(filename)
     return np.asarray(pili)
 
-def colorize_using_palette(density, color, palette_filename, grid_dim, add_half = True, add_offset = True, thres = 0, color_factor = None, saturate=False, saturation_factor = 1.6, device = "cuda:0"):
-    #  ------- Filtering ------
-    # Density thresholding
-    # thres = 0
-    positive_dens_bool = density[:,0] > thres
-    negative_dens_bool = torch.logical_not(positive_dens_bool)
-    pos_dens_ind = positive_dens_bool.nonzero()
-
-    ## Test this:
-    if add_half:
-        color = color + 0.5
-
-    if color_factor is not None:
-        color = color * color_factor
-    # rgb_color_factor = 10
-    # rgb_colors = rgb_color_factor * rgb_colors 
-
-    positive_components = color > 0
-    positive_color_bool = positive_components.all(axis=1)
-    negative_color_bool = torch.logical_not(positive_color_bool)
-
-    # Join (AND) the positive densities with the positive colors (why are they negative?)
-
-    # filtered_indices = torch.logical_and(positive_dens_bool, positive_color_bool).nonzero() 
-    # Filtering either negative colors or negative densities.
-    filtered_indices = positive_dens_bool.nonzero()
-    # filtered_indices = positive_color_bool.nonzero()
-    neg_color_indices = negative_color_bool.nonzero()
-    anti_filtered_indices = negative_color_bool.nonzero()
-    filtered_indices = filtered_indices[:,0]
-
-    pos_d_neg_c_ind = torch.logical_and(positive_dens_bool, negative_color_bool).nonzero()
-    pos_d_pos_c_ind = torch.logical_and(positive_dens_bool, positive_color_bool).nonzero()
+def colorize_using_palette(voxel_data, color, palette_filename, grid_dim, add_offset = True, color_factor = None, saturate=False, saturation_factor = 1.6, device = "cuda:0"):
+    
+    # color = color.reshape((grid_dim, grid_dim, grid_dim, 3))
+    color = torch.tensor(color, device = device,dtype=torch.float32 )
+    voxel_data_flat = voxel_data.flatten()
+    filtered_indices = torch.tensor(np.array(voxel_data_flat.nonzero()), device = device)
+    filtered_indices = filtered_indices[0, :]
     filtered_colors = color[filtered_indices, :]
 
     if saturate:
-        def saturate_color(color, saturation_factor = 1.3):
-            """color is (3,) numpy array"""
-            import colorsys
-            hsv = np.array(colorsys.rgb_to_hsv(color[0], color[1], color[2]))
-            hsv = hsv * np.array([1, saturation_factor, 1]) # Multiply saturation by value. Leave the rest untouched
-            color = colorsys.hsv_to_rgb(hsv[0], hsv[1], hsv[2])
-            # return np.clip(np.array(color), 0, 1) # Probably done inside the library (didn't see any difference)
-            return np.array(color)
-        
         processed_colors = np.zeros((filtered_colors.shape[0], filtered_colors.shape[1]))
         filtered_colors_np = filtered_colors.detach().numpy()
 
@@ -112,8 +77,6 @@ def colorize_using_palette(density, color, palette_filename, grid_dim, add_half 
 
         filtered_colors = torch.tensor(processed_colors, device=device, dtype=torch.float32)
 
-    filtered_density = density[pos_dens_ind,0]
-    # filtered_points = grid_points[positive_dens_bool[:,0], ...]
 
     # Scale colors
     filtered_colors_scaled = filtered_colors * 255
@@ -162,6 +125,7 @@ def colorize_using_palette(density, color, palette_filename, grid_dim, add_half 
     #     color_labels[pos_d_pos_c_ind] = 3
 
     return color_labels, vox_pal
+
 def colorize_pos_neg(density, color, thres = 0, add_offset = True):
     
     #  ------- Filtering ------
@@ -493,3 +457,12 @@ def make_masks(source_image_filenames, downsample = False, save_folder = None):
             im.save(source_image)
 
     return masks
+
+def saturate_color(color, saturation_factor = 1.3):
+    """color is (3,) numpy array"""
+    import colorsys
+    hsv = np.array(colorsys.rgb_to_hsv(color[0], color[1], color[2]))
+    hsv = hsv * np.array([1, saturation_factor, 1]) # Multiply saturation by value. Leave the rest untouched
+    color = colorsys.hsv_to_rgb(hsv[0], hsv[1], hsv[2])
+    # return np.clip(np.array(color), 0, 1) # Probably done inside the library (didn't see any difference)
+    return np.array(color)
