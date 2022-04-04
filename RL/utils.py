@@ -77,7 +77,6 @@ def colorize_using_palette(voxel_data, color, palette_filename, grid_dim, add_of
 
         filtered_colors = torch.tensor(processed_colors, device=device, dtype=torch.float32)
 
-
     # Scale colors
     filtered_colors_scaled = filtered_colors * 255
     # print("Grid shape", grid.links.shape)
@@ -104,27 +103,16 @@ def colorize_using_palette(voxel_data, color, palette_filename, grid_dim, add_of
     for c in np_palette:
         vox_pal.append(Color(c[0], c[1], c[2], 255))
 
-    # for i in range(0, 255):
-    #     vox_pal.append(Color(i, i, i, 255))
-
     # TODO: Revise this
     # vox_pal = [Color(0, 0, 0, 0)] + vox_pal
     ## Voxel of size 
     color_labels = np.zeros((grid_dim*grid_dim*grid_dim))
     color_labels[filtered_indices.cpu().numpy()] = color_indices.cpu().numpy() + [1 if add_offset else 0]
     
-
-    # # Anti-filter debug
-    # pos_d_pos_col_color = Color(37, 245, 5, 255)
-    # pos_d_neg_col_color = Color(252,2,44, 255)
-    # anti_filter_debug = True
-    # if anti_filter_debug is True:
-    #     vox_pal[1] = pos_d_pos_col_color
-    #     vox_pal[2] = pos_d_neg_col_color
-    #     color_labels[pos_dens_ind] = 2 # There is an offset in the palette!
-    #     color_labels[pos_d_pos_c_ind] = 3
-
     return color_labels, vox_pal
+
+# def colorize_using_classifier():
+#     pass
 
 def colorize_pos_neg(density, color, thres = 0, add_offset = True):
     
@@ -174,11 +162,11 @@ def colorize_pos_neg(density, color, thres = 0, add_offset = True):
     return color_labels, vox_pal
 
 def colorize_using_classifier(density, color, thres = 0):
+    
     #  ------- Filtering ------
     # Density thresholding
     # thres = 0
     positive_dens_bool = density[:,0] > thres
-    negative_dens_bool = torch.logical_not(positive_dens_bool)
     pos_dens_ind = positive_dens_bool.nonzero()
 
     ## Test this:

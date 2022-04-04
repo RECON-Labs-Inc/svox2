@@ -3,28 +3,25 @@ import sys
 from datetime import datetime
 import argparse
 import pickle
+from importlib import reload as reload
+from PIL import Image
+from math import pi as PI
+
+import torch
+import numpy as np
+from scipy.spatial.transform import Rotation as Rotation
+import matplotlib.pyplot as plt
+from pyvox.models import Vox, Color
+from pyvox.writer import VoxWriter
+
+from svox2 import *
+from utils import colorize_using_palette, filter_sphere, palette_from_file
 
 sys.path.append("..")
 sys.path.append("/workspace/aseeo-research")
-# sys.path.append(.)
-
-import torch
-from svox2 import *
-import numpy as np
-import matplotlib.pyplot as plt
-from PIL import Image
-from importlib import reload as reload
 
 import RLResearch.utils.gen_utils as gu
 import RLResearch.utils.pose_utils as pu
-
-from utils import colorize_using_palette, filter_sphere, palette_from_file
-
-reload(svox2)
-from svox2 import *
-
-from pyvox.models import Vox, Color
-from pyvox.writer import VoxWriter
 
 # checkpoint = "/workspace/datasets/TanksAndTempleBG/Truck/ckpt/tt_test/ckpt.npz"
 # checkpoint = "/workspace/datasets/cube_2/ckpt/std/ckpt.npz"
@@ -51,12 +48,21 @@ parser.add_argument("--data_dir", type=str,default=None, help="Project folder")
 parser.add_argument("--grid_dim", type=int, default = 256, help = "grid_dimension")
 parser.add_argument("--saturate", action="store_true", help="Boost saturation of voxel colors")
 parser.add_argument("--debug_folder", type=str,default=None, help="debug folder for saving stuff")
+parser.add_argument("--euler_angles", type=float, nargs=3 ,default=None, help="Euler angles for rotation")
+parser.add_argument("--euler_mode", type=str, default=None, help="Euler angle rotation order")
 args = parser.parse_args()
 checkpoint = args.checkpoint
 data_dir = args.data_dir
 grid_dim = args.grid_dim
 saturate = args.saturate
 debug_folder = args.debug_folder
+
+if args.euler_angles is None:
+    euler_angles = None
+else:
+    euler_angles = np.array(args.euler_angles)
+
+print("Euler angles:", euler_angles)
 
 ## -----
 
@@ -81,6 +87,22 @@ grid_points = torch.cat((grid_mesh[0][...,None], grid_mesh[1][...,None], grid_me
 num_voxels = grid_points.shape[0] * grid_points.shape[1] * grid_points.shape[2]
 grid_points = grid_points.reshape((num_voxels, 3))
 grid_points = torch.tensor(grid_points, device=device, dtype=torch.float32)
+
+if euler_angles is not None:
+    
+    c = PI/180.0
+    
+    if args.euler_mode is not None:
+        euler_mode = args.mode
+    else:
+        euler_mode = 'zyx'
+
+    r = Rotation.from_euler(euler_mode,[c * euler_angles[0], c * euler_angles[1], c * euler_angles[2]])
+    rot_mat = torch.tensor(r.as_matrix(), device = device, dtype=torch.float32)
+    print(rot_mat)
+    offset = torch.tensor([grid_dim/2, grid_dim/2, grid_dim/2 ])
+    grid_points = torch.matmul(rot_mat, (grid_points - offset).T).T + offset
+
 
 print("GP", grid_points.shape)
 
@@ -167,7 +189,13 @@ vox_pal = palette_from_file("/workspace/data/vox_palette.png")
 # vox_pal.append(Color(128, 128, 128, 255))
 # vox_pal.append(Color(255, 0, 0, 255))
 
-vox = Vox.from_dense(color_labels.astype(np.uint8).reshape(grid_dim, grid_dim, grid_dim))
+
+color_labels = color_labels.astype(np.uint8).reshape(grid_dim, grid_dim, grid_dim)
+
+## REMOVE THIS
+# color_labels[:, :,:128] = 0
+
+vox = Vox.from_dense(color_labels)
 vox.palette = vox_pal
 
 result_folder = Path(data_dir)/"result"/"voxel"
