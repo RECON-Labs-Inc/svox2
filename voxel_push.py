@@ -59,6 +59,7 @@ parser.add_argument("--grid_dim", type=int, default = 256, help = "grid_dimensio
 parser.add_argument("--use_block", action="store_true" ,  help = "Use block")
 # parser.add_argument("--mask_thres", type=float ,  help = "Values less than mask_thres will be masked")
 parser.add_argument("--debug_folder", type=str,default=None, help="debug folder for saving stuff")
+parser.add_argument("--keep_floor", action="store_true" ,  help = "Don't remove voxels upwards.")
 
 args = parser.parse_args()
 # checkpoint_path = Path(args.checkpoint)
@@ -146,11 +147,13 @@ for x in range (mins[0], maxs[0]):
             voxel_data[x, mins[1] + k, z] = ref_voxel_data[x, mins[1] + k, z]
             k += 1
         
+        if args.keep_floor is False:
+            # print("pushiiiiiiing")
         #Push backwards, from (maxs[1] to mins[1])
-        l = 0
-        while (maxs[1] - l) >= mins[0] and  ref_voxel_data[x, maxs[1] - l, z]==0 :
-            voxel_data[x, maxs[1] - l, z] = ref_voxel_data[x, maxs[1] - l, z]
-            l += 1
+            l = 0
+            while (maxs[1] - l) >= mins[0] and  ref_voxel_data[x, maxs[1] - l, z]==0 :
+                voxel_data[x, maxs[1] - l, z] = ref_voxel_data[x, maxs[1] - l, z]
+                l += 1
         
 # z push
 for x in range (mins[0], maxs[0]):

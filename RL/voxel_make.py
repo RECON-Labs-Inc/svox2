@@ -49,13 +49,14 @@ parser.add_argument("--grid_dim", type=int, default = 256, help = "grid_dimensio
 parser.add_argument("--saturate", action="store_true", help="Boost saturation of voxel colors")
 parser.add_argument("--debug_folder", type=str,default=None, help="debug folder for saving stuff")
 parser.add_argument("--euler_angles", type=float, nargs=3 ,default=None, help="Euler angles for rotation")
-parser.add_argument("--euler_mode", type=str, default=None, help="Euler angle rotation order")
+parser.add_argument("--euler_mode", type=str, default="zyx", help="Euler angle rotation order")
 args = parser.parse_args()
 checkpoint = args.checkpoint
 data_dir = args.data_dir
 grid_dim = args.grid_dim
 saturate = args.saturate
 debug_folder = args.debug_folder
+euler_mode = args.euler_mode
 
 if args.euler_angles is None:
     euler_angles = None
@@ -89,14 +90,7 @@ grid_points = grid_points.reshape((num_voxels, 3))
 grid_points = torch.tensor(grid_points, device=device, dtype=torch.float32)
 
 if euler_angles is not None:
-    
     c = PI/180.0
-    
-    if args.euler_mode is not None:
-        euler_mode = args.mode
-    else:
-        euler_mode = 'zyx'
-
     r = Rotation.from_euler(euler_mode,[c * euler_angles[0], c * euler_angles[1], c * euler_angles[2]])
     rot_mat = torch.tensor(r.as_matrix(), device = device, dtype=torch.float32)
     print(rot_mat)

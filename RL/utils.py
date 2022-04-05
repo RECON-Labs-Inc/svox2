@@ -14,6 +14,11 @@ from PIL import Image
 from importlib import reload as reload
 from rembg.bg import remove as remove_backround
 
+from sklearn.cluster import KMeans
+from sklearn.metrics import pairwise_distances_argmin
+from sklearn.datasets import load_sample_image
+from sklearn.utils import shuffle
+
 import RLResearch.utils.gen_utils as gu
 import RLResearch.utils.pose_utils as pu
 
@@ -161,88 +166,46 @@ def colorize_pos_neg(density, color, thres = 0, add_offset = True):
 
     return color_labels, vox_pal
 
-def colorize_using_classifier(density, color, thres = 0):
+def colorize_using_classifier( voxel_data, color, grid_dim = None, thres = 0, n_clusters=6, saturate=False, saturation_factor = 2.2):
+    """Colorize using classifier"""
     
-    #  ------- Filtering ------
-    # Density thresholding
-    # thres = 0
-    positive_dens_bool = density[:,0] > thres
-    pos_dens_ind = positive_dens_bool.nonzero()
-
-    ## Test this:
-    # if add_half:
-    #     color = color + 0.5
-    # rgb_color_factor = 10
-    # rgb_colors = rgb_color_factor * rgb_colors 
-
-    positive_components = color > 0
-    positive_color_bool = positive_components.all(axis=1)
-    negative_color_bool = torch.logical_not(positive_color_bool)
-
-    # Join (logical AND) the positive densities with the positive colors (why are they negative?)
-
-    filtered_indices = torch.logical_and(positive_dens_bool, positive_color_bool).nonzero() 
-    # Filtering either negative colors or negative densities.
-    # filtered_indices = positive_dens_bool.nonzero()
-    # filtered_indices = positive_color_bool.nonzero()
-    neg_color_indices = negative_color_bool.nonzero()
-    anti_filtered_indices = negative_color_bool.nonzero()
-    filtered_indices = filtered_indices[:,0]
-
-    pos_d_neg_c_ind = torch.logical_and(positive_dens_bool, negative_color_bool).nonzero()
-    pos_d_pos_c_ind = torch.logical_and(positive_dens_bool, positive_color_bool).nonzero()
+    device = "cuda:0"
+    # color = torch.tensor(color, device = device,dtype=torch.float32 )
+    voxel_data_flat = voxel_data.flatten()
+    filtered_indices = voxel_data_flat.nonzero()
+    filtered_indices = filtered_indices[0]
     filtered_colors = color[filtered_indices, :]
 
-    filtered_density = density[pos_dens_ind,0]
-    # filtered_points = grid_points[positive_dens_bool[:,0], ...]
+    if saturate:
+        processed_colors = np.zeros((filtered_colors.shape[0], filtered_colors.shape[1]))
+        filtered_colors_np = filtered_colors.detach().numpy()
+
+        for i in range(0, filtered_colors.shape[0]):           
+            processed_colors[i, :] = saturate_color(filtered_colors_np[i], saturation_factor = saturation_factor)
+
+        filtered_colors = torch.tensor(processed_colors, device=device, dtype=torch.float32)
 
     # Scale colors
     filtered_colors_scaled = filtered_colors * 255
-    print("Grid shape", grid.links.shape)
 
-    # ------ Compute color distance --------
-    palette = torch.tensor(load_palette(palette_filename), dtype=torch.float32, device = device)
+    image_array_sample = shuffle(filtered_colors.cpu().numpy(), random_state=0, n_samples=min(len(filtered_colors), 10000))
+    kmeans = KMeans(n_clusters=n_clusters, random_state=0).fit(image_array_sample)
 
-    # Remove alpha
-    palette = palette[0,:,:3]
+    filtered_labels = kmeans.predict(filtered_colors.cpu().numpy()) + 2 ## IMPORTANT!!!!
 
-    # Compute distance
-    color_dists = torch.cdist(filtered_colors_scaled, palette)
+    np_palette = (kmeans.cluster_centers_ * 255).astype('B')
 
-    # Get min distance (closest color)
-    mins = torch.min(color_dists, dim = 1)
-    color_indices = mins.indices
-
-    # paletted_colors = palette[color_indices].cpu().numpy().astype(np.uint8)
-
-    # ------- Make palette ----------
-    vox_pal = []
-    np_palette = palette.cpu().numpy().astype(np.uint8)
-
+    pal = []
     for c in np_palette:
-        vox_pal.append(Color(c[0], c[1], c[2], 255))
+        pal.append(Color(c[0], c[1], c[2], 255))
+        
+    pal = [Color(0, 0, 0, 0)] + pal # Add 'palette for EMPTY voxel'. This is why the n_clusters should be less than 255
+        
+    np_color_labels = np.zeros_like(voxel_data_flat)
+    np_color_labels[filtered_indices] = filtered_labels
 
-    # for i in range(0, 255):
-    #     vox_pal.append(Color(i, i, i, 255))
+    return np_color_labels.reshape(grid_dim, grid_dim, grid_dim), pal
 
-    # TODO: Revise this
-    # vox_pal = [Color(0, 0, 0, 0)] + vox_pal
-    ## Voxel of size 
-    color_labels = np.zeros((grid_dim*grid_dim*grid_dim))
-    color_labels[filtered_indices.cpu().numpy()] = color_indices.cpu().numpy() + [1 if add_offset else 0]
-    
-
-    # # Anti-filter debug
-    # pos_d_pos_col_color = Color(37, 245, 5, 255)
-    # pos_d_neg_col_color = Color(252,2,44, 255)
-    # anti_filter_debug = True
-    # if anti_filter_debug is True:
-    #     vox_pal[1] = pos_d_pos_col_color
-    #     vox_pal[2] = pos_d_neg_col_color
-    #     color_labels[pos_dens_ind] = 2 # There is an offset in the palette!
-    #     color_labels[pos_d_pos_c_ind] = 3
-
-    return color_labels, vox_pal
 
 def colorize_using_density(density, color, thres = 0, max_density = 1000, debug_hist_filename = None, add_offset=True):
 

@@ -18,7 +18,10 @@ from importlib import reload as reload
 import RLResearch.utils.gen_utils as gu
 import RLResearch.utils.pose_utils as pu
 
-from utils import colorize_using_palette, filter_sphere, palette_from_file
+from utils import colorize_using_palette
+from utils import filter_sphere
+from utils import palette_from_file
+from utils import colorize_using_classifier
 
 reload(svox2)
 from svox2 import *
@@ -40,6 +43,8 @@ parser.add_argument("--vox_file", type = str, default=None,  help="Vox file to b
 parser.add_argument("--data_dir", type=str,default=None, help="Project folder")
 parser.add_argument("--grid_dim", type=int, default = 256, help = "grid_dimension")
 parser.add_argument("--saturate", action="store_true", help="Boost saturation of voxel colors")
+parser.add_argument("--color_mode", type=str,default="palette", choices = ["palette", "classifier"], help="Type of colorizing. Either k-means or palette")
+parser.add_argument("--n_clusters", type=int,default=8, help="Number of colors used in classifier")
 parser.add_argument("--debug_folder", type=str,default=None, help="debug folder for saving stuff")
 args = parser.parse_args()
 data_dir = args.data_dir
@@ -47,6 +52,9 @@ grid_dim = args.grid_dim
 saturate = args.saturate
 vox_file = args.vox_file
 debug_folder = args.debug_folder
+color_mode = args.color_mode
+n_clusters = args.n_clusters
+
 ## -----
 
 device = "cpu"
@@ -72,7 +80,12 @@ with open(str(grid_data_path.resolve()), 'rb') as f:
 # grid_data = pickle.load(str(grid_data_path.resolve()))
 color = grid_data["color"]
 
-color_labels, vox_pal = colorize_using_palette(voxel_data, color, palette_filename, grid_dim, add_offset = True, color_factor = None, saturate=False, saturation_factor = 1.6, device = "cuda:0")
+if color_mode == "palette":
+        color_labels, vox_pal = colorize_using_palette(voxel_data, color, palette_filename, grid_dim, add_offset = True, color_factor = None, saturate=False, saturation_factor = 1.6, device = "cuda:0")
+elif color_mode == "classifier":
+        color_labels, vox_pal = colorize_using_classifier(voxel_data, color, grid_dim = grid_dim, n_clusters=n_clusters, saturate = saturate)
+else:
+        raise ValueError("Unrecognized color mode")
 
 result_folder = Path(data_dir)/"result"/"voxel"
 result_folder.mkdir(exist_ok=True, parents=True)

@@ -1,42 +1,15 @@
 #!/bin/bash
 
-# pre_process_poses.sh /workspace/datasets/tangerine
-# pre_process_poses.sh /workspace/datasets/cctv 
-# pre_process_poses.sh /workspace/datasets/cube_2
-# convert_to_tnt.sh /workspace/datasets/tangerine
-# convert_to_tnt.sh /workspace/datasets/cctv
-# convert_to_tnt.sh /workspace/datasets/cube_2
-
-# cd /workspace/svox2/opt
-
-# python autotune.py -g "0 1" "/workspace/svox2/opt/tasks/datasets.json" 
-
-
-# datasets=("cactus" "cctv" "tangerine" "cube_2" "pen_cup_2" "dog")
-
-# datasets=("cactus"  "cctv"  "dog" "tangerine" "pen_cup_2")
-
-# datasets=("_req_plant _req_abalone")
-datasets=("_b_cctv_130" "_b_shoe_200" "_b_cactus_130")
+datasets=("_t_cactus_color" "_t_shoe_color" "_t_cctv_color")
+# datasets=("_t_cctv_color")
 # grid_dims=("256" "128" "64")
-
-
+dataset_folder=/workspace/datasets
+n_clusters=8
 for dataset in ${datasets[@]}; do
-  ./voxelizing_pipeline.sh sdfsdf $dataset
-  # COPY_DIR=/workspace/data/mask_$dataset
-  # mkdir $COPY_DIR
-  # cp /workspace/datasets/$dataset/result/voxel/vox_mask_debug.vox $COPY_DIR
-  # cp /workspace/datasets/$dataset/result/vox_masked.vox $COPY_DIR
-
-  # python get_voxel_data_palette_debug.py --checkpoint /workspace/datasets/$dataset/ckpt/std/ckpt.npz --data_dir /workspace/datasets/$dataset
-  # python ../voxel_mask.py --checkpoint /workspace/datasets/$dataset/ckpt/std/ckpt.npz --data_dir /workspace/datasets/$dataset
-  # python /workspace/aseeo-research/RLResearch/workflow/mask.py \
-  # --image_data_path="/workspace/datasets/$dataset/source/images_undistorted" \
-  # --output_folder="/workspace/datasets/$dataset/source/masks"
-
-  # for grid_dim in ${grid_dims[@]}; do
-  #   python get_voxel_data_palette_debug.py --checkpoint /workspace/datasets/$dataset/ckpt/std/ckpt.npz --grid_dim $grid_dim --data_folder /workspace/datasets/$dataset 
-  # done
+  # python voxel_colorize.py --vox_file $dataset_folder/$dataset/result/voxel/vox_pushed.vox --data_dir $dataset_folder/$dataset --debug_folder /workspace/data/$dataset --color_mode classifier 
+  # voxelizing_pipeline.sh sdfsdf $dataset_folder/$dataset
+  python ../voxel_push.py --vox_file $dataset_folder/$dataset/result/vox_masked.vox --ref_vox_file /workspace/datasets/$dataset/result/vox_masked.vox --data_dir /workspace/datasets/$dataset --debug_folder /workspace/data/$dataset --use_block 
+  python voxel_colorize.py --vox_file $dataset_folder/$dataset/result/voxel/vox_pushed.vox --data_dir /workspace/datasets/$dataset --debug_folder /workspace/data/$dataset
 done
 
 #https://opensource.com/article/18/5/you-dont-know-bash-intro-bash-arrays
