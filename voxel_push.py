@@ -53,7 +53,6 @@ parser.add_argument("--vox_file", type = str, default=None,  help="Vox file to b
 parser.add_argument("--ref_vox_file", type = str, default=None,  help="Vox file to be masked")
 # parser.add_argument("--checkpoint", type=str,default=None, help=".npz checkpoint file")
 parser.add_argument("--data_dir", type=str,default=None, help="Project folder")
-parser.add_argument("--grid_dim", type=int, default = 256, help = "grid_dimension")
 # parser.add_argument("--num_masks", type=int, default = 20, help = "grid_dimension")
 # parser.add_argument("--source", type=str, default = "images_undistorted", help = "subfolder where images are located")
 parser.add_argument("--use_block", action="store_true" ,  help = "Use block")
@@ -64,7 +63,6 @@ parser.add_argument("--keep_floor", action="store_true" ,  help = "Don't remove 
 args = parser.parse_args()
 # checkpoint_path = Path(args.checkpoint)
 data_dir = args.data_dir
-grid_dim = args.grid_dim
 
 if args.vox_file is None:
         vox_file = Path(data_dir)/"result"/"voxel"/"vox.vox"
@@ -106,6 +104,7 @@ voxel_data = m.to_dense()
 original_palette = m.palette
 
 # Get bounds
+print(voxel_data.shape)
 indices = np.array(voxel_data.nonzero())
 mins = np.amin(indices, axis=1)
 maxs = np.amax(indices, axis=1)
@@ -149,7 +148,7 @@ for x in range (mins[0], maxs[0]):
         
         if args.keep_floor is False:
             # print("pushiiiiiiing")
-        #Push backwards, from (maxs[1] to mins[1])
+            #Push backwards, from (maxs[1] to mins[1])
             l = 0
             while (maxs[1] - l) >= mins[0] and  ref_voxel_data[x, maxs[1] - l, z]==0 :
                 voxel_data[x, maxs[1] - l, z] = ref_voxel_data[x, maxs[1] - l, z]

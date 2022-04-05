@@ -52,7 +52,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--vox_file", type = str, default=None,  help="Vox file to be masked")
 parser.add_argument("--checkpoint", type=str,default=None, help=".npz checkpoint file")
 parser.add_argument("--data_dir", type=str,default=None, help="Project folder")
-parser.add_argument("--grid_dim", type=int, default = 256, help = "grid_dimension")
 parser.add_argument("--num_masks", type=int, default = 20, help = "number of masks used to mask/sculpt the object")
 # parser.add_argument("--vox_file", type=str, default = None, help = "Voxel file to be masked")
 parser.add_argument("--source", type=str, default = "images_undistorted", help = "subfolder where images are located")
@@ -62,7 +61,6 @@ parser.add_argument("--debug_folder", type=str,default=None, help="debug folder 
 args = parser.parse_args()
 checkpoint_path = Path(args.checkpoint)
 data_dir = args.data_dir
-grid_dim = args.grid_dim
 
 if args.vox_file is None:
         vox_file = Path(data_dir)/"result"/"voxel"/"vox.vox"

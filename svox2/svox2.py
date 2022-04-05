@@ -1562,7 +1562,7 @@ class SparseGrid(nn.Module):
             offset.to(device=points.device), points, scaling.to(device=points.device)
         )
 
-    def grid2world(self, points):
+    def grid2world(self, points, grid_size):
         """
         Grid coordinates to world coordinates. Grid coordinates are
         normalized to [0, n_voxels] in each side
@@ -1570,7 +1570,8 @@ class SparseGrid(nn.Module):
         :param points: (N, 3)
         :return: (N, 3)
         """
-        gsz = self._grid_size()
+        # gsz = self._grid_size()
+        gzs = grid_size
         roffset = self.radius * (1.0 / gsz - 1.0) + self.center
         rscaling = 2.0 * self.radius / gsz
         return torch.addcmul(

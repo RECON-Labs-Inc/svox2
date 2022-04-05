@@ -12,15 +12,22 @@
 
 current_dir=$(pwd)
 dataset_folder=/workspace/datasets
-
-
+grid_dim=128
+echo "GRID : "$grid_dim
 # ------- BENCHMARK --------------------
+# If arg 1 does not exist, then video=/workspace/data/cctv.mov:
 video=${1:-/workspace/data/cctv.mov}
 # video=/workspace/data/cctv.mov
 # video="/workspace/datasets/nike_shoe.mov"
+
+# If arg 2 does not exist, then dataset=cctv_30mar_130:
 dataset=${2:-'cctv_30mar_130'}
 # dataset='cctv_30mar_130'
-num_frames=130
+
+# If arg 3 does not exist, then num_frames=130:
+num_frames=${3:-130}
+echo "num_frames "$num_frames
+
 ms_downscale=2
 
 echo $video
@@ -69,7 +76,7 @@ echo $dataset
 # cd /workspace/svox2/opt
 # experiment=std
 
-# # # # TRAIN
+# # # TRAIN
 
 
 # CKPT_DIR=$dataset_folder/$dataset/ckpt/$experiment
@@ -77,35 +84,35 @@ echo $dataset
 # NOHUP_FILE=$CKPT_DIR/log
 # echo CKPT $CKPT_DIR
 # echo LOGFILE $NOHUP_FILE
-# config=fastest.json
 
 # log_file=$dataset_folder/$dataset/logs/train_time.log
 # tic.sh $log_file
 # # --data_dir $dataset_folder/$dataset -c configs/fastest.json
 # time CUDA_VISIBLE_DEVICES=0 nohup python -u opt.py -t $CKPT_DIR $dataset_folder/$dataset -c configs/fastest.json --log_depth_map > $NOHUP_FILE
+# # time CUDA_VISIBLE_DEVICES=0 nohup python -u opt.py -t $CKPT_DIR $dataset_folder/$dataset -c configs/fastest_128.json --log_depth_map > $NOHUP_FILE
 # toc.sh $log_file
 
-# log_file=$dataset_folder/$dataset/logs/post_train_time.log
-# tic.sh $log_file
+log_file=$dataset_folder/$dataset/logs/post_train_time.log
+tic.sh $log_file
 
-# cd $current_dir
-# echo
-# echo "make voxels"
-# log_file=$dataset_folder/$dataset/logs/make_voxel.log
-# tic.sh $log_file
-# time python voxel_make.py --checkpoint /workspace/datasets/$dataset/ckpt/std/ckpt.npz --data_dir /workspace/datasets/$dataset --debug_folder /workspace/data/$dataset
-# toc.sh $log_file
+cd $current_dir
+echo
+echo "make voxels"
+log_file=$dataset_folder/$dataset/logs/make_voxel.log
+tic.sh $log_file
+time python voxel_make.py --checkpoint /workspace/datasets/$dataset/ckpt/std/ckpt.npz --data_dir /workspace/datasets/$dataset --debug_folder /workspace/data/$dataset --grid_dim $grid_dim
+toc.sh $log_file
 
 
-# cd $current_dir
+cd $current_dir
 
-# echo
-# echo "Mask voxels"
-# log_file=$dataset_folder/$dataset/logs/mask_voxels_time.log
+echo
+echo "Mask voxels"
+log_file=$dataset_folder/$dataset/logs/mask_voxels_time.log
 
-# tic.sh $log_file
-# time python ../voxel_mask.py --checkpoint /workspace/datasets/$dataset/ckpt/std/ckpt.npz --data_dir /workspace/datasets/$dataset --source images --debug_folder /workspace/data/$dataset
-# toc.sh $log_file
+tic.sh $log_file
+time python ../voxel_mask.py --checkpoint /workspace/datasets/$dataset/ckpt/std/ckpt.npz --data_dir /workspace/datasets/$dataset --source images --debug_folder /workspace/data/$dataset
+toc.sh $log_file
 
 # #  LEGACY. WE DONT NEED TO FILL USING MASKS
 # # # a
@@ -123,7 +130,7 @@ log_file=$dataset_folder/$dataset/logs/push_voxels_time.log
 
 tic.sh $log_file
 # time python ../voxel_push.py --vox_file /workspace/datasets/$dataset/result/vox_masked_block.vox --ref_vox_file /workspace/datasets/$dataset/result/vox_masked.vox --data_dir /workspace/datasets/$dataset --debug_folder /workspace/data/$dataset
-time python ../voxel_push.py --vox_file $dataset_folder/$dataset/result/vox_masked.vox --ref_vox_file /workspace/datasets/$dataset/result/vox_masked.vox --data_dir /workspace/datasets/$dataset --debug_folder /workspace/data/$dataset --use_block
+CUDA_LAUNCH_BLOCKING=1;time python ../voxel_push.py --vox_file $dataset_folder/$dataset/result/vox_masked.vox --ref_vox_file /workspace/datasets/$dataset/result/vox_masked.vox --data_dir /workspace/datasets/$dataset --debug_folder /workspace/data/$dataset --use_block
 toc.sh $log_file
 
 echo

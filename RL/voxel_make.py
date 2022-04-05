@@ -37,7 +37,6 @@ import RLResearch.utils.pose_utils as pu
 saturate = True
 saturation_factor = 2.2
 palette_filename = "/workspace/data/vox_palette.png"
-grid_dim = 256
 # Careful with this: SparseGrid wants values in args.json grid range (which could be different from grid_dim)
 
 
@@ -213,9 +212,10 @@ voxel_point_path = Path(data_dir)/"project_files"/"voxel_points.npy"
 np.save(str(voxel_point_path.resolve()), occupied_grid_points_centered )
 print("Saved voxel points to ", voxel_point_path)
 
-grid_points_world = grid.grid2world(grid_points)
+grid_points_world = grid.grid2world(grid_points, grid_dim)
 grid_points_world = grid_points_world.cpu().numpy()
 grid_points_path = Path(data_dir)/"project_files"/"grid_points.npy"
+print(grid_points_world[:10,...])
 np.save(str(grid_points_path.resolve()), grid_points_world )
 print("Saved grid points to ", grid_points_path)
 
