@@ -71,29 +71,37 @@ echo $dataset
 # time convert_to_tnt.sh /workspace/datasets/$dataset /workspace/datasets/$dataset "images"
 
 
-# echo
-# echo "Train"
-# cd /workspace/svox2/opt
-# experiment=std
+echo
+echo "Train"
+cd /workspace/svox2/opt
+experiment=std
 
-# # # TRAIN
+# # # # TRAIN
 
 
-# CKPT_DIR=$dataset_folder/$dataset/ckpt/$experiment
-# mkdir -p $CKPT_DIR
-# NOHUP_FILE=$CKPT_DIR/log
-# echo CKPT $CKPT_DIR
-# echo LOGFILE $NOHUP_FILE
+CKPT_DIR=$dataset_folder/$dataset/ckpt/$experiment
+mkdir -p $CKPT_DIR
+NOHUP_FILE=$CKPT_DIR/log
+echo CKPT $CKPT_DIR
+echo LOGFILE $NOHUP_FILE
+config=fastest.json
 
-# log_file=$dataset_folder/$dataset/logs/train_time.log
-# tic.sh $log_file
-# # --data_dir $dataset_folder/$dataset -c configs/fastest.json
-# time CUDA_VISIBLE_DEVICES=0 nohup python -u opt.py -t $CKPT_DIR $dataset_folder/$dataset -c configs/fastest.json --log_depth_map > $NOHUP_FILE
-# # time CUDA_VISIBLE_DEVICES=0 nohup python -u opt.py -t $CKPT_DIR $dataset_folder/$dataset -c configs/fastest_128.json --log_depth_map > $NOHUP_FILE
-# toc.sh $log_file
+log_file=$dataset_folder/$dataset/logs/train_time.log
+tic.sh $log_file
+# --data_dir $dataset_folder/$dataset -c configs/fastest.json
+time CUDA_VISIBLE_DEVICES=0 nohup python -u opt.py -t $CKPT_DIR $dataset_folder/$dataset -c configs/fastest.json --log_depth_map > $NOHUP_FILE
+toc.sh $log_file
 
 log_file=$dataset_folder/$dataset/logs/post_train_time.log
 tic.sh $log_file
+
+cd $current_dir
+echo
+echo "make voxels"
+log_file=$dataset_folder/$dataset/logs/make_voxel.log
+tic.sh $log_file
+time python voxel_make.py --checkpoint /workspace/datasets/$dataset/ckpt/std/ckpt.npz --data_dir /workspace/datasets/$dataset --debug_folder /workspace/data/$dataset
+toc.sh $log_file
 
 cd $current_dir
 echo
@@ -104,11 +112,21 @@ time python voxel_make.py --checkpoint /workspace/datasets/$dataset/ckpt/std/ckp
 toc.sh $log_file
 
 
+<<<<<<< Updated upstream
 cd $current_dir
 
 echo
 echo "Mask voxels"
 log_file=$dataset_folder/$dataset/logs/mask_voxels_time.log
+=======
+echo
+echo "Mask voxels"
+log_file=$dataset_folder/$dataset/logs/mask_voxels_time.log
+
+tic.sh $log_file
+time python ../voxel_mask.py --checkpoint /workspace/datasets/$dataset/ckpt/std/ckpt.npz --data_dir /workspace/datasets/$dataset --source images --debug_folder /workspace/data/$dataset
+toc.sh $log_file
+>>>>>>> Stashed changes
 
 tic.sh $log_file
 time python ../voxel_mask.py --checkpoint /workspace/datasets/$dataset/ckpt/std/ckpt.npz --data_dir /workspace/datasets/$dataset --source images --debug_folder /workspace/data/$dataset
@@ -145,5 +163,5 @@ toc.sh $log_file
 log_file=$dataset_folder/$dataset/logs/post_train_time.log
 toc.sh $log_file
 
-# Toc total time
-toc.sh $dataset_folder/$dataset/logs/total_time_log.log
+# # Toc total time
+# toc.sh $dataset_folder/$dataset/logs/total_time_log.log
