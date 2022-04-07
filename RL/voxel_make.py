@@ -183,12 +183,12 @@ vox_pal = palette_from_file("/workspace/data/vox_palette.png")
 # vox_pal.append(Color(255, 0, 0, 255))
 
 
-color_labels = color_labels.astype(np.uint8).reshape(grid_dim, grid_dim, grid_dim)
+# color_labels = color_labels.astype(np.uint8).reshape(grid_dim, grid_dim, grid_dim)
 
 ## REMOVE THIS
 # color_labels[:, :,:128] = 0
 
-vox = Vox.from_dense(color_labels)
+vox = Vox.from_dense(color_labels.astype(np.uint8).reshape(grid_dim, grid_dim, grid_dim))
 vox.palette = vox_pal
 
 result_folder = Path(data_dir)/"result"/"voxel"
@@ -212,7 +212,7 @@ voxel_point_path = Path(data_dir)/"project_files"/"voxel_points.npy"
 np.save(str(voxel_point_path.resolve()), occupied_grid_points_centered )
 print("Saved voxel points to ", voxel_point_path)
 
-grid_points_world = grid.grid2world(grid_points, grid_dim)
+grid_points_world = grid.grid2world(grid_points)
 grid_points_world = grid_points_world.cpu().numpy()
 grid_points_path = Path(data_dir)/"project_files"/"grid_points.npy"
 print(grid_points_world[:10,...])

@@ -166,7 +166,8 @@ def colorize_pos_neg(density, color, thres = 0, add_offset = True):
 
     return color_labels, vox_pal
 
-def colorize_using_classifier( voxel_data, color, grid_dim = None, thres = 0, n_clusters=6, saturate=False, saturation_factor = 2.2):
+def colorize_using_classifier( voxel_data, color, grid_dim = None, thres = 0, n_clusters=6, saturate=False, saturation_factor = 2.2, 
+                                paletize = False, palette_filename = None, device = "cuda:0"):
     """Colorize using classifier"""
     
     device = "cuda:0"
@@ -188,24 +189,79 @@ def colorize_using_classifier( voxel_data, color, grid_dim = None, thres = 0, n_
     # Scale colors
     filtered_colors_scaled = filtered_colors * 255
 
-    image_array_sample = shuffle(filtered_colors.cpu().numpy(), random_state=0, n_samples=min(len(filtered_colors), 10000))
+    image_array_sample = shuffle(filtered_colors.detach().numpy(), random_state=0, n_samples=min(len(filtered_colors), 10000))
     kmeans = KMeans(n_clusters=n_clusters, random_state=0).fit(image_array_sample)
 
-    filtered_labels = kmeans.predict(filtered_colors.cpu().numpy()) + 2 ## IMPORTANT!!!!
-
+    # filtered_labels = kmeans.predict(filtered_colors.detach().numpy()) + 2 ## IMPORTANT!!!!
+    filtered_labels = kmeans.predict(filtered_colors.detach().numpy())
     np_palette = (kmeans.cluster_centers_ * 255).astype('B')
-
-    pal = []
-    for c in np_palette:
-        pal.append(Color(c[0], c[1], c[2], 255))
-        
-    pal = [Color(0, 0, 0, 0)] + pal # Add 'palette for EMPTY voxel'. This is why the n_clusters should be less than 255
-        
+    
     np_color_labels = np.zeros_like(voxel_data_flat)
-    np_color_labels[filtered_indices] = filtered_labels
+
+    if paletize is True: # Paletize the colors using a palette
+        if palette_filename is not None:
+            input_colors = np_palette[filtered_labels]
+            np_color_labels[filtered_indices], pal = paletize_colors(input_colors, palette_filename)
+
+        else:
+            raise ValueError("You should input a palette filename")
+    else:
+        # Just output the colors normally
+        
+        pal = []
+        for c in np_palette:
+            pal.append(Color(c[0], c[1], c[2], 255))
+            
+        pal = [Color(0, 0, 0, 0)] + pal # Add 'palette for EMPTY voxel'. This is why the n_clusters should be less than 255
+            
+        np_color_labels = np.zeros_like(voxel_data_flat)
+        np_color_labels[filtered_indices] = filtered_labels
 
     return np_color_labels.reshape(grid_dim, grid_dim, grid_dim), pal
 
+def paletize_colors(input_colors, palette_filename, device = "cuda:0", add_offset = True):
+    """Find closest colors to a given palette
+    
+    Args:
+        input_colors: tensor of shape (n_colors x 3)
+    Returns:
+        color_labels: np.array of shape (n_colors,), with indices to the palette
+        pal: palette
+    """
+    
+    filtered_colors_scaled = torch.tensor(input_colors, device = device, dtype=torch.float32)
+    # print("Grid shape", grid.links.shape)
+
+    # ------ Compute color distance --------
+    palette = torch.tensor(load_palette(palette_filename), dtype=torch.float32, device = device)
+
+    # Remove alpha
+    palette = palette[0,:,:3]
+
+    # Compute distance
+    color_dists = torch.cdist(filtered_colors_scaled, palette)
+
+    # Get min distance (closest color)
+    mins = torch.min(color_dists, dim = 1)
+    color_indices = mins.indices
+
+    # paletted_colors = palette[color_indices].cpu().numpy().astype(np.uint8)
+
+    # ------- Make palette ----------
+    vox_pal = []
+    np_palette = palette.cpu().numpy().astype(np.uint8)
+
+    for c in np_palette:
+        vox_pal.append(Color(c[0], c[1], c[2], 255))
+
+    # TODO: Revise this
+    # vox_pal = [Color(0, 0, 0, 0)] + vox_pal
+    ## Voxel of size 
+    
+    # Note: these color labels are NOT (grid_dim, grid_dim, grid_dim). They are the color labels for the INPUT colors (which should correspond to only occupied voxels)
+    color_labels = color_indices.cpu().numpy() + [1 if add_offset else 0]
+    
+    return color_labels, vox_pal
 
 def colorize_using_density(density, color, thres = 0, max_density = 1000, debug_hist_filename = None, add_offset=True):
 
@@ -292,7 +348,6 @@ def prepare_points(tensor, scale_factor, inv_recenter_matrix, device = "cuda:0")
     tensor_world = inv_recenter_matrix.double() @ tensor
 
     return tensor_world
-
 
 
 def mask_points(voxel_data, occupied_points_world, mask_subset, c2w_subset, cam_matrix, device = "cuda:0", debug_dir = None):

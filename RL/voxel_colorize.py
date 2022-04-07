@@ -30,12 +30,6 @@ from pyvox.models import Vox, Color
 from pyvox.writer import VoxWriter
 from pyvox.parser import VoxParser
 
-saturate = True
-saturation_factor = 2.2
-palette_filename = "/workspace/data/vox_palette.png"
-grid_dim = 256
-# Careful with this: SparseGrid wants values in args.json grid range (which could be different from grid_dim)
-
 
 ## ARGPARSE
 parser = argparse.ArgumentParser()
@@ -43,8 +37,10 @@ parser.add_argument("--vox_file", type = str, default=None,  help="Vox file to b
 parser.add_argument("--data_dir", type=str,default=None, help="Project folder")
 # parser.add_argument("--grid_dim", type=int, default = 256, help = "grid_dimension")
 parser.add_argument("--saturate", action="store_true", help="Boost saturation of voxel colors")
-parser.add_argument("--color_mode", type=str,default="palette", choices = ["palette", "classifier"], help="Type of colorizing. Either k-means or palette")
+parser.add_argument("--color_mode", type=str,default="palette", choices = ["palette", "classifier"], help="Type of colorizing. Either classifier (kmeans clustering) or palette")
 parser.add_argument("--n_clusters", type=int,default=8, help="Number of colors used in classifier")
+parser.add_argument("--paletize", action="store_true", help="Use a palette and output colors accordingly. You should also input a palette filename")
+parser.add_argument("--palette_filename", type = str, default="/workspace/data/vox_palette.png",  help="Palette png")
 parser.add_argument("--debug_folder", type=str,default=None, help="debug folder for saving stuff")
 args = parser.parse_args()
 data_dir = args.data_dir
@@ -54,6 +50,8 @@ vox_file = args.vox_file
 debug_folder = args.debug_folder
 color_mode = args.color_mode
 n_clusters = args.n_clusters
+paletize = args.paletize
+palette_filename = args.palette_filename
 
 ## -----
 
@@ -87,7 +85,7 @@ color = grid_data["color"]
 if color_mode == "palette":
         color_labels, vox_pal = colorize_using_palette(voxel_data, color, palette_filename, grid_dim, add_offset = True, color_factor = None, saturate=False, saturation_factor = 1.6, device = "cuda:0")
 elif color_mode == "classifier":
-        color_labels, vox_pal = colorize_using_classifier(voxel_data, color, grid_dim = grid_dim, n_clusters=n_clusters, saturate = saturate)
+        color_labels, vox_pal = colorize_using_classifier(voxel_data, color, grid_dim = grid_dim, n_clusters=n_clusters, saturate = saturate, paletize=paletize, palette_filename=palette_filename, device = device)
 else:
         raise ValueError("Unrecognized color mode")
 
