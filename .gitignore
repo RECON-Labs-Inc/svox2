@@ -6,3 +6,8 @@ ckpt/
 
 .eggs/
 eggs/
+
+**/build
+
+
+**/svox2.egg-info
