@@ -54,7 +54,6 @@ parser.add_argument("--vox_file", type = str, default=None,  help="Vox file to b
 parser.add_argument("--checkpoint", type=str,default=None, help=".npz checkpoint file")
 parser.add_argument("--data_dir", type=str,default=None, help="Project folder")
 parser.add_argument("--num_masks", type=int, default = 20, help = "number of masks used to mask/sculpt the object")
-# parser.add_argument("--vox_file", type=str, default = None, help = "Voxel file to be masked")
 parser.add_argument("--source", type=str, default = "images_undistorted", help = "subfolder where images are located")
 parser.add_argument("--use_block", action="store_true" ,  help = "Use block")
 parser.add_argument("--mask_thres", type=float , default=0.5,  help = "Values less than mask_thres will be masked")
@@ -78,34 +77,8 @@ debug_folder = args.debug_folder
 
 print("MASK THRES" , mask_thres)
 
-# #----
-# print("Running the no argument version")
-# data_dir = "/workspace/datasets/_p_shoe_200_single_pose_dwn_8"
-# exp_name = "std"
-# checkpoint_path = Path(data_dir)/"ckpt"/exp_name/"ckpt.npz"
-# vox_file = "/workspace/datasets/_p_shoe_200_single_pose_dwn_8/result/voxel/vox.vox"
-# grid_dim = 256 # My sampling
-# orig_grid_dim = 640 # Actual grid size of grid from args.json
-# source = "images"
-# # #-----
-
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 # device = "cpu"
-
-# Load arguments from json
-# json_config_path = Path(data_dir)/"ckpt"/exp_name/"args.json"
-
-# # Doesn't seem necessary to actually load the dataset.
-# dataset = datasets["nsvf"](
-#             data_dir,
-#             split="test_train",
-#             device=device,
-#             factor=1,
-#             n_images=None)
-
-# grid = SparseGrid.load(str(checkpoint_path.resolve()))
-# config_util.setup_render_opts(grid.opt, args)
-# print('Render options', grid.opt)
 
 # ---- Load vox file
 
@@ -257,7 +230,6 @@ color_labels[voxel_indices] = scores
 color_labels = color_labels.reshape(voxel_data.shape)
 vox = Vox.from_dense(color_labels)
 vox.palette = vox_pal
-# p_projected = p_projected
 
 # output_path = "/workspace/data/vox_mask_summary.vox"
 output_path = Path(data_dir)/"result"/"voxel"/"vox_mask_debug.vox"
@@ -268,16 +240,12 @@ if debug_folder is not None:
         VoxWriter( str(Path(debug_folder)/"vox_mask_debug.vox"), vox).write()
         
 
-
-
 # Now filter based on threshold
 
-# mask_thres = 0.5
 print("mask_thres", mask_thres)
 mask_thres_int = mask_thres * 255
 mask_thres_int = int(mask_thres_int)
 
-# masked_values = torch.
 voxel_data_flat = orig_voxel_data.flatten()
 voxel_indices = voxel_data_flat.nonzero()
 mask_result = voxel_data_flat[voxel_indices] # Init
@@ -294,7 +262,6 @@ if use_block:
         output_path = Path(data_dir)/"result"/"vox_masked_block.vox"
 else:
         output_path = Path(data_dir)/"result"/"vox_masked.vox"
-
 
 
 VoxWriter(str(output_path.resolve()), vox).write()
