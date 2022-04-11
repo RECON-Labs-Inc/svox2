@@ -52,17 +52,12 @@ import RL.utils
 parser = argparse.ArgumentParser()
 parser.add_argument("--vox_file", type = str, default=None,  help="Vox file to be masked")
 parser.add_argument("--ref_vox_file", type = str, default=None,  help="Vox file to be masked")
-# parser.add_argument("--checkpoint", type=str,default=None, help=".npz checkpoint file")
 parser.add_argument("--data_dir", type=str,default=None, help="Project folder")
-# parser.add_argument("--num_masks", type=int, default = 20, help = "grid_dimension")
-# parser.add_argument("--source", type=str, default = "images_undistorted", help = "subfolder where images are located")
 parser.add_argument("--use_block", action="store_true" ,  help = "Use block")
-# parser.add_argument("--mask_thres", type=float ,  help = "Values less than mask_thres will be masked")
 parser.add_argument("--debug_folder", type=str,default=None, help="debug folder for saving stuff")
 parser.add_argument("--keep_floor", action="store_true" ,  help = "Don't remove voxels upwards.")
 
 args = parser.parse_args()
-# checkpoint_path = Path(args.checkpoint)
 data_dir = args.data_dir
 
 if args.vox_file is None:
@@ -75,28 +70,11 @@ use_block = args.use_block
 ref_vox_file = args.ref_vox_file
 debug_folder = args.debug_folder
 
-
 print("INPUT VOXEL", vox_file )
 print("REF VOXEL", ref_vox_file)
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
-# device = "cpu"
-
-# Load arguments from json
-# json_config_path = Path(data_dir)/"ckpt"/exp_name/"args.json"
-
-# # Doesn't seem necessary to actually load the dataset.
-# dataset = datasets["nsvf"](
-#             data_dir,
-#             split="test_train",
-#             device=device,
-#             factor=1,
-#             n_images=None)
-
-# grid = SparseGrid.load(str(checkpoint_path.resolve()))
-# config_util.setup_render_opts(grid.opt, args)
-# print('Render options', grid.opt)
 
 # ---- Load vox file
 
@@ -173,7 +151,6 @@ for x in range (mins[0], maxs[0]):
 # color_labels = voxel_data
 vox = Vox.from_dense(voxel_data)
 vox.palette = original_palette
-# p_projected = p_projected
 
 # output_path = "/workspace/data/vox_mask_summary.vox"
 output_path = Path(data_dir)/"result"/"voxel"/"vox_pushed.vox"
