@@ -215,7 +215,7 @@ print("Saved voxel points to ", voxel_point_path)
 grid_points_world = grid.grid2world(grid_points)
 grid_points_world = grid_points_world.cpu().numpy()
 grid_points_path = Path(data_dir)/"project_files"/"grid_points.npy"
-print(grid_points_world[:10,...])
+# print(grid_points_world[:10,...])
 np.save(str(grid_points_path.resolve()), grid_points_world )
 print("Saved grid points to ", grid_points_path)
 

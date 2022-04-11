@@ -30,7 +30,7 @@ cd $PX_RUNPATH
 
 echo
 echo "Push voxels"
-time_log_file=$PROJECT_FOLDER/logs/push_voxels_time.log
+time_log_file=$PROJECT_FOLDER/logs/time_push_voxels.log
 total_log=$PROJECT_FOLDER/logs/time_total.log
 
 tic.sh $time_log_file

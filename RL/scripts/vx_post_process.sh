@@ -70,4 +70,6 @@ then
     exit 1
 else
     echo "Colorizing succesful"
+    echo "Voxelization succesful"
+    exit 0
 fi
