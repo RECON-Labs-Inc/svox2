@@ -35,7 +35,6 @@ from pyvox.parser import VoxParser
 parser = argparse.ArgumentParser()
 parser.add_argument("--vox_file", type = str, default=None,  help="Vox file to be colorized")
 parser.add_argument("--data_dir", type=str,default=None, help="Project folder")
-# parser.add_argument("--grid_dim", type=int, default = 256, help = "grid_dimension")
 parser.add_argument("--saturate", action="store_true", help="Boost saturation of voxel colors")
 parser.add_argument("--color_mode", type=str,default="palette", choices = ["palette", "classifier"], help="Type of colorizing. Either classifier (kmeans clustering) or palette")
 parser.add_argument("--n_clusters", type=int,default=8, help="Number of colors used in classifier")
@@ -44,7 +43,6 @@ parser.add_argument("--palette_filename", type = str, default="/workspace/data/v
 parser.add_argument("--debug_folder", type=str,default=None, help="debug folder for saving stuff")
 args = parser.parse_args()
 data_dir = args.data_dir
-# grid_dim = args.grid_dim
 saturate = args.saturate
 vox_file = args.vox_file
 debug_folder = args.debug_folder
@@ -69,9 +67,6 @@ vox_pal = palette_from_file("/workspace/data/vox_palette.png")
 grid_dim = voxel_data.shape[0]
 if len(np.unique(voxel_data.shape)) > 1 :
         raise ValueError("Voxel is not cubic")
-# vox_pal.append(Color(0, 0, 0, 255))
-# vox_pal.append(Color(128, 128, 128, 255))
-# vox_pal.append(Color(255, 0, 0, 255))
 
 result_folder = Path(data_dir)/"result"/"voxel"
 grid_data_path = Path(result_folder)/"grid_data.pkl"
@@ -79,7 +74,6 @@ grid_data_path = Path(result_folder)/"grid_data.pkl"
 with open(str(grid_data_path.resolve()), 'rb') as f:
         grid_data = pickle.load(f)
 
-# grid_data = pickle.load(str(grid_data_path.resolve()))
 color = grid_data["color"]
 
 if color_mode == "palette":
