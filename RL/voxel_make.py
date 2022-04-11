@@ -23,29 +23,12 @@ sys.path.append("/workspace/aseeo-research")
 import RLResearch.utils.gen_utils as gu
 import RLResearch.utils.pose_utils as pu
 
-# checkpoint = "/workspace/datasets/TanksAndTempleBG/Truck/ckpt/tt_test/ckpt.npz"
-# checkpoint = "/workspace/datasets/cube_2/ckpt/std/ckpt.npz"
-# checkpoint = "/workspace/datasets/cctv/ckpt/scale_test/ckpt.npz"
-# checkpoint = "/workspace/datasets/cactus/ckpt/std/ckpt.npz"
-
-# checkpoint = "/workspace/datasets/cactus/ckpt/std/ckpt.npz"
-# data_dir = "/workspace/datasets/cactus"
-
-# checkpoint = "/workspace/datasets/_b_shoe_200/ckpt/std/ckpt.npz"
-# data_dir  = "/workspace/datasets/_b_shoe_200"
-
-saturate = True
-saturation_factor = 2.2
-palette_filename = "/workspace/data/vox_palette.png"
-# Careful with this: SparseGrid wants values in args.json grid range (which could be different from grid_dim)
-
 
 ## ARGPARSE
 parser = argparse.ArgumentParser()
 parser.add_argument("--checkpoint", type=str,default=None, help=".npz checkpoint file")
 parser.add_argument("--data_dir", type=str,default=None, help="Project folder")
 parser.add_argument("--grid_dim", type=int, default = 256, help = "grid_dimension")
-parser.add_argument("--saturate", action="store_true", help="Boost saturation of voxel colors")
 parser.add_argument("--debug_folder", type=str,default=None, help="debug folder for saving stuff")
 parser.add_argument("--euler_angles", type=float, nargs=3 ,default=None, help="Euler angles for rotation")
 parser.add_argument("--euler_mode", type=str, default="zyx", help="Euler angle rotation order")
@@ -53,7 +36,6 @@ args = parser.parse_args()
 checkpoint = args.checkpoint
 data_dir = args.data_dir
 grid_dim = args.grid_dim
-saturate = args.saturate
 debug_folder = args.debug_folder
 euler_mode = args.euler_mode
 
@@ -182,11 +164,6 @@ color_labels = filter_sphere(color_labels,
                                     radius = sphere_filter_factor)
 
 vox_pal = palette_from_file("/workspace/data/vox_palette.png")
-# vox_pal.append(Color(0, 0, 0, 255))
-# vox_pal.append(Color(128, 128, 128, 255))
-# vox_pal.append(Color(255, 0, 0, 255))
-
-
 
 vox = Vox.from_dense(color_labels.astype(np.uint8).reshape(grid_dim, grid_dim, grid_dim))
 vox.palette = vox_pal
@@ -228,3 +205,22 @@ grid_data_path = result_folder/"grid_data.pkl"
 with open(str(grid_data_path.resolve()), 'wb') as handle:
     pickle.dump(grid_data, handle)
 
+
+# Debug this file with the following configuration in visual studio code. (Excerpt from launch.json)
+
+        # {
+        #     "name": "Make",
+        #     "type": "python",
+        #     "request": "launch",
+        #     "program": "${file}",
+        #     "console": "integratedTerminal",
+        #     "justMyCode": true,
+        #     "args" : [
+        #         "--checkpoint", "/workspace/datasets/cactus_prep_d/ckpt/std/ckpt.npz",
+        #         "--data_dir", "/workspace/datasets/cactus_prep_d",
+        #         "--debug_folder", "/workspace/data/cactus_prep_d",
+        #         "--grid_dim", "128"
+            
+        #     ]
+        #     // --checkpoint /workspace/datasets/$dataset/ckpt/std/ckpt.npz --data_dir /workspace/datasets/$dataset --debug_folder /workspace/data/$dataset --grid_dim $grid_dim
+        # }
