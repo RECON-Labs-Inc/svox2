@@ -62,7 +62,11 @@ if args.euler_angles is None:
 else:
     euler_angles = np.array(args.euler_angles)
 
+if debug_folder is not None:
+    print("Debugging to ", debug_folder)
+
 print("Euler angles:", euler_angles)
+print("Grid", grid_dim)
 
 ## -----
 
@@ -183,10 +187,6 @@ vox_pal = palette_from_file("/workspace/data/vox_palette.png")
 # vox_pal.append(Color(255, 0, 0, 255))
 
 
-# color_labels = color_labels.astype(np.uint8).reshape(grid_dim, grid_dim, grid_dim)
-
-## REMOVE THIS
-# color_labels[:, :,:128] = 0
 
 vox = Vox.from_dense(color_labels.astype(np.uint8).reshape(grid_dim, grid_dim, grid_dim))
 vox.palette = vox_pal

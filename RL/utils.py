@@ -215,7 +215,7 @@ def colorize_using_classifier( voxel_data, color, grid_dim = None, thres = 0, n_
         pal = [Color(0, 0, 0, 0)] + pal # Add 'palette for EMPTY voxel'. This is why the n_clusters should be less than 255
             
         np_color_labels = np.zeros_like(voxel_data_flat)
-        np_color_labels[filtered_indices] = filtered_labels
+        np_color_labels[filtered_indices] = filtered_labels + 2 # Weird indexing issue for voxels
 
     return np_color_labels.reshape(grid_dim, grid_dim, grid_dim), pal
 
@@ -308,7 +308,6 @@ def colorize_using_density(density, color, thres = 0, max_density = 1000, debug_
     return color_labels, vox_pal, color_bar
 
 def palette_from_file(filename):
-    """Make the simplest possible palette, with 1 colors. Empty, and gray"""
     
     np_palette = load_palette(filename).astype(np.uint8)
     np_palette = np_palette[0]

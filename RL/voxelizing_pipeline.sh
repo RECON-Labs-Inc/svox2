@@ -40,7 +40,7 @@ ms_downscale=2
 echo $video
 echo $dataset
 
-#----- START -----
+# #----- START -----
 
 # make_dirs.sh $dataset_folder/$dataset
 # cp /workspace/svox2/RL/voxelizing_pipeline.sh $dataset_folder/$dataset/project_files/voxelizing_pipeline_frozen.sh
@@ -79,26 +79,26 @@ echo $dataset
 
 
 
-# # # # # TRAIN
-echo
-echo "Train"
-cd /workspace/svox2/opt
-experiment=std
+# # # # # # TRAIN
+# echo
+# echo "Train"
+# cd /workspace/svox2/opt
+# experiment=std
 
-CKPT_DIR=$dataset_folder/$dataset/ckpt/$experiment
-mkdir -p $CKPT_DIR
-NOHUP_FILE=$CKPT_DIR/log
-echo CKPT $CKPT_DIR
-echo LOGFILE $NOHUP_FILE
-config=fastest.json
+# CKPT_DIR=$dataset_folder/$dataset/ckpt/$experiment
+# mkdir -p $CKPT_DIR
+# NOHUP_FILE=$CKPT_DIR/log
+# echo CKPT $CKPT_DIR
+# echo LOGFILE $NOHUP_FILE
+# config=fastest.json
 
-log_file=$dataset_folder/$dataset/logs/train_time.log
-tic.sh $log_file
-# --data_dir $dataset_folder/$dataset -c configs/fastest.json
-# time CUDA_VISIBLE_DEVICES=0 nohup python -u opt.py -t $CKPT_DIR $dataset_folder/$dataset -c configs/fastest.json --log_depth_map > $NOHUP_FILE
-time CUDA_VISIBLE_DEVICES=0 nohup python -u opt.py -t $CKPT_DIR $dataset_folder/$dataset -c configs/fastest_128.json --log_depth_map > $NOHUP_FILE
-toc.sh $log_file $total_log
-echo "USING 128 in training grid!!!!!"
+# log_file=$dataset_folder/$dataset/logs/train_time.log
+# tic.sh $log_file
+# # --data_dir $dataset_folder/$dataset -c configs/fastest.json
+# # time CUDA_VISIBLE_DEVICES=0 nohup python -u opt.py -t $CKPT_DIR $dataset_folder/$dataset -c configs/fastest.json --log_depth_map > $NOHUP_FILE
+# time CUDA_VISIBLE_DEVICES=0 nohup python -u opt.py -t $CKPT_DIR $dataset_folder/$dataset -c configs/fastest_128.json --log_depth_map > $NOHUP_FILE
+# toc.sh $log_file $total_log
+# echo "USING 128 in training grid!!!!!"
 
 ####### POST TRAIN
 
@@ -109,8 +109,8 @@ cd $current_dir
 echo
 echo "make voxels"
 log_file=$dataset_folder/$dataset/logs/make_voxel.log
-tic.sh $log_file
-time python voxel_make.py --checkpoint /workspace/datasets/$dataset/ckpt/std/ckpt.npz --data_dir /workspace/datasets/$dataset --debug_folder /workspace/data/$dataset --grid_dim $grid_dim
+tic.sh $log_file--checkpoint /workspace/datasets/$dataset/ckpt/std/ckpt.npz --data_dir /workspace/datasets/$dataset --debug_folder /workspace/data/$dataset --grid_dim $grid_dim
+time python voxel_make.py 
 toc.sh $log_file $total_log
 
 cd $current_dir
