@@ -39,7 +39,7 @@ total_log=$PROJECT_FOLDER/logs/time_total.log
 
 tic.sh $time_log_file
 # TODO: Change location of file?
-time python ../voxel_mask.py --checkpoint $PROJECT_FOLDER/ckpt/std/ckpt.npz --data_dir $PROJECT_FOLDER --mask_thres $MASK_THRES --num_masks $NUM_MASKS --source images 2>&1 | tee $LOG_FILE 
+time python voxel_mask.py --checkpoint $PROJECT_FOLDER/ckpt/std/ckpt.npz --data_dir $PROJECT_FOLDER --mask_thres $MASK_THRES --num_masks $NUM_MASKS --source images 2>&1 | tee $LOG_FILE 
 EXIT_STATUS=${PIPESTATUS[0]:-1}
 
 toc.sh $time_log_file $total_log

@@ -44,6 +44,7 @@ sys.path.append("/workspace/aseeo-research")
 import RLResearch.utils.depth_utils as du
 import RLResearch.utils.gen_utils as gu
 
+sys.path.append("/workspace/svox2")
 import RL.utils
 
 
