@@ -259,9 +259,9 @@ vox = Vox.from_dense(voxel_data_flat.reshape(voxel_data.shape))
 vox.palette = original_palette
 
 if use_block:
-        output_path = Path(data_dir)/"result"/"vox_masked_block.vox"
+        output_path = Path(data_dir)/"result"/"voxel"/"vox_masked_block.vox"
 else:
-        output_path = Path(data_dir)/"result"/"vox_masked.vox"
+        output_path = Path(data_dir)/"result"/"voxel"/"vox_masked.vox"
 
 
 VoxWriter(str(output_path.resolve()), vox).write()

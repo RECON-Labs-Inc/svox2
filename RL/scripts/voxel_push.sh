@@ -38,9 +38,9 @@ tic.sh $time_log_file
 if [ "$2" = "keep_floor" ]
 then
     echo "Keeping floor"
-    time python voxel_push.py --vox_file $PROJECT_FOLDER/result/vox_masked.vox --ref_vox_file $PROJECT_FOLDER/result/vox_masked.vox --data_dir $PROJECT_FOLDER --use_block --keep_floor 2>&1 | tee $LOG_FILE 
+    time python voxel_push.py --vox_file $PROJECT_FOLDER/result/voxel/vox_masked.vox --ref_vox_file $PROJECT_FOLDER/result//voxel/vox_masked.vox --data_dir $PROJECT_FOLDER --use_block --keep_floor 2>&1 | tee $LOG_FILE 
 else
-    time python voxel_push.py --vox_file $PROJECT_FOLDER/result/vox_masked.vox --ref_vox_file $PROJECT_FOLDER/result/vox_masked.vox --data_dir $PROJECT_FOLDER --use_block 2>&1 | tee $LOG_FILE 
+    time python voxel_push.py --vox_file $PROJECT_FOLDER/result/voxel/vox_masked.vox --ref_vox_file $PROJECT_FOLDER/result/voxel/vox_masked.vox --data_dir $PROJECT_FOLDER --use_block 2>&1 | tee $LOG_FILE 
 fi
 
 EXIT_STATUS=${PIPESTATUS[0]:-1}
