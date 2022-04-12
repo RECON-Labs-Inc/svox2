@@ -29,15 +29,19 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--checkpoint", type=str,default=None, help=".npz checkpoint file")
 parser.add_argument("--data_dir", type=str,default=None, help="Project folder")
 parser.add_argument("--grid_dim", type=int, default = 256, help = "grid_dimension")
+parser.add_argument("--sampling_batch_size", type=int, default = 4096, help = "grid_dimension")
 parser.add_argument("--debug_folder", type=str,default=None, help="debug folder for saving stuff")
 parser.add_argument("--euler_angles", type=float, nargs=3 ,default=None, help="Euler angles for rotation")
 parser.add_argument("--euler_mode", type=str, default="zyx", help="Euler angle rotation order")
+parser.add_argument("--sphere_filter_factor", type=float, default = 0.45, help = "Percentage of cube size that will be filtered by a sphere")
 args = parser.parse_args()
 checkpoint = args.checkpoint
 data_dir = args.data_dir
 grid_dim = args.grid_dim
 debug_folder = args.debug_folder
 euler_mode = args.euler_mode
+batch_size = args.sampling_batch_size
+sphere_filter_factor = args.sphere_filter_factor
 
 if args.euler_angles is None:
     euler_angles = None
@@ -88,31 +92,59 @@ print("GP", grid_points.shape)
 sample_max_density = True
 sample_max_colors = True
 
+def sample_grid_color(grid_points):
+    """Sample grid using max. Input a is an array of points, output is the color at those points"""
+    # Outputs a list of 8 values (cube)
+    _, color = grid.sample_max(grid_points, grid_coords=True, use_kernel = False)
+
+    # Stack tuples to make an array
+    color_cube = torch.stack( color, dim = 2)
+
+    if grid.basis_dim > 1:
+        color_cube = color_cube.reshape(-1, 3, grid.basis_dim, 8) # Split component wise
+        color_cube = color_cube[:, :, 0, :] # Take only first SH for each color
+    # Take the most intense color
+    color_intensity = torch.linalg.norm(color_cube, dim = 1)
+
+    # dens # Caution, overrides previous max_indices 
+    _, max_indices  = torch.max(color_intensity, dim=1)
+
+    # Don't remember how this works.......
+    r = torch.gather(color_cube[:,0,:], 1, max_indices[..., None])
+    g = torch.gather(color_cube[:,1,:], 1, max_indices[..., None])
+    b = torch.gather(color_cube[:,2,:], 1, max_indices[..., None])
+
+    color = torch.cat((r, g, b),dim =1)
+
+    return color
+
+# def sample_grid_density(grid_points):
+
 if sample_max_colors:
     if device != "cpu":
         ValueError("Sample max only works in CPU mode")
     else:
-        # Outputs a list of 8 values (cube)
-        _, color = grid.sample_max(grid_points, grid_coords=True, use_kernel = False)
 
-        # Stack tuples to make an array
-        color_cube = torch.stack( color, dim = 2)
+        # batch_size = 4096
+        num_points = grid_points.shape[0]
+        color = torch.zeros_like(grid_points)
 
-        if grid.basis_dim > 1:
-            color_cube = color_cube.reshape(-1, 3, grid.basis_dim, 8) # Split component wise
-            color_cube = color_cube[:, :, 0, :] # Take only first SH for each color
-        # Take the most intense color
-        color_intensity = torch.linalg.norm(color_cube, dim = 1)
+        for i in range(0, int(num_points / batch_size)):
+            start_ind = i * batch_size
+            end_ind = (i + 1) * batch_size
 
-        # dens # Caution, overrides previous max_indices 
-        _, max_indices  = torch.max(color_intensity, dim=1)
+            grid_points_batch = grid_points[start_ind:end_ind]
 
-        # Don't remember how this works.......
-        r = torch.gather(color_cube[:,0,:], 1, max_indices[..., None])
-        g = torch.gather(color_cube[:,1,:], 1, max_indices[..., None])
-        b = torch.gather(color_cube[:,2,:], 1, max_indices[..., None])
+            color_batch = sample_grid_color(grid_points_batch)
+            color[start_ind:end_ind] = color_batch
+        
+        frac = np.modf(num_points / batch_size)[0]
+        
+        # If there are some indices left
+        if frac != 0:
+            grid_points_batch = grid_points[end_ind:]
+            color[end_ind:] = sample_grid_color(grid_points_batch)
 
-        color = torch.cat((r, g, b),dim =1)
 else:
     _, color = grid.sample(grid_points, grid_coords=True)
     color = color.reshape(-1, 3, grid.basis_dim)
@@ -123,6 +155,7 @@ if sample_max_density:
         ValueError("Sample max only works in CPU mode")
     else:
         # Outputs a list of 8 values (cube)
+        # Batchify this, too?
         density, _ = grid.sample_max(grid_points, grid_coords=True, use_kernel = False)
         density_cube = torch.cat( density, dim=1)
         density_max, max_indices = torch.max(density_cube, dim=1)
