@@ -1,7 +1,7 @@
 cd $PX_RUNPATH/..
 conda env update --file environment.yml --prune
 nvcc --version
-
+nvidia-smi
 
 echo "CUDA_HOME"
 echo $CUDA_HOME
