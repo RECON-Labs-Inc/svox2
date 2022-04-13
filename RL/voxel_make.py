@@ -190,7 +190,7 @@ color_labels = np.zeros((grid_dim*grid_dim*grid_dim))
 color_labels[filtered_indices.cpu().numpy()] = 2 # first index of palette, else is zero
 
 # Filter with spherical boundary
-sphere_filter_factor = 0.35 # Percentage of bounding box
+# sphere_filter_factor = 0.35 # Percentage of bounding box
 color_labels = filter_sphere(color_labels, 
                                     grid_points / (grid.shape[0] - 1 ), # grid_points are in grid_coord. I'm normalizing here (assuming square grid)
                                     center = torch.tensor([0, 0, 0]),
