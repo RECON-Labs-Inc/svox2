@@ -1,3 +1,4 @@
+cd $PX_RUNPATH
 conda env update --file environment.yml --prune
 nvcc --version
 
