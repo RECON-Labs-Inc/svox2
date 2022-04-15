@@ -420,7 +420,7 @@ def mask_points(voxel_data, occupied_points_world, mask_subset, c2w_subset, cam_
         return scores, mask_result
 
 
-def make_masks(source_image_filenames, downsample = False, save_folder = None):
+def make_masks(source_image_filenames, downsample = False, mask_path = None,  load_from_file = True, save_masks = True):
     """Makes masks from filenames. Returns a list of masks"""
     
     dilate_image = True
@@ -428,38 +428,56 @@ def make_masks(source_image_filenames, downsample = False, save_folder = None):
     downsample = True
     masks = []
     # i = 0
+    if mask_path is not None:
+        if mask_path.exists() is False:
+            print(str(mask_path), "does not exist. Creating.")
+            mask_path.mkdir(exist_ok=True, parents=True)
+            
     for source_image, ind  in zip(source_image_filenames, range(0, len(source_image_filenames))):
-    # for ind in subset:
-        #Compute mask here based on file list.
-        print(str(ind), str(source_image))
-        pili = Image.open(source_image)
-        max_dimension = max((pili.width, pili.height))
-        if downsample is True:
-                if max_dimension >= 3840:
-                        mask_downsample = 4
-                elif max_dimension >= 1920:
-                        mask_downsample = 2
-                else:
-                        mask_downsample = 1
         
-                pili = pili.resize( ( int(pili.width/mask_downsample), int(pili.height/mask_downsample) ))
-                mask = remove_backround(pili)
-                mask = mask.resize( (mask.width * mask_downsample, mask.height * mask_downsample) )
+        mask_filename = mask_path/source_image.name
+
+        if load_from_file is True and mask_filename.is_file():
+            loaded_from_file = True
+            print("Mask exists. Loading ", mask_filename)
+            pili = Image.open(mask_filename)
+            mask = np.asarray(pili)
         else:
-                mask = remove_backround(pili)
+            #Compute mask here based on file list.
+            loaded_from_file = False
+            print("Computing mask")
+            print(str(ind), str(source_image))
+            pili = Image.open(source_image)
+            max_dimension = max((pili.width, pili.height))
+            if downsample is True:
+                    if max_dimension >= 3840:
+                            mask_downsample = 4
+                    elif max_dimension >= 1920:
+                            mask_downsample = 2
+                    else:
+                            mask_downsample = 1
+            
+                    pili = pili.resize( ( int(pili.width/mask_downsample), int(pili.height/mask_downsample) ))
+                    mask = remove_backround(pili)
+                    mask = mask.resize( (mask.width * mask_downsample, mask.height * mask_downsample) )
+            else:
+                    mask = remove_backround(pili)
 
-        mask = mask.split()[-1]
-        mask = np.asarray(mask)
-        # mask_subset.append(np.asarray(mask))
+            mask = mask.split()[-1]
+            mask = np.asarray(mask)
+            # mask_subset.append(np.asarray(mask))
 
-        if dilate_image:
-                mask = gu.dilate_image( mask, dilatation_size= dilatation_size)
+            if dilate_image:
+                    mask = gu.dilate_image( mask, dilatation_size= dilatation_size)
                 
         masks.append(mask)
 
-        if save_folder is not None:
+        # Don't save again if loaded from file
+        if save_masks is True and loaded_from_file is False:
             im = Image.fromarray(mask)
-            im.save(source_image)
+            
+            print("Saving mask to", mask_filename)
+            im.save(mask_filename)
 
     return masks
 
