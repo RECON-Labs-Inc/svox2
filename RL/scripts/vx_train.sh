@@ -5,7 +5,7 @@
 # Train using neurecon.
 
 # USAGE
-# train.sh -f <PROJECT_FOLDER> -l <[OPTIONAL] LOG_FILE> -n <[OPTIONAL] NUMBER OF CONFIG FILE> -c <[OPTIONAL] PATH OF CONFIG FILE>
+# vx_train.sh -f <PROJECT_FOLDER> -l <[OPTIONAL] LOG_FILE> -n <[OPTIONAL] NUMBER OF CONFIG FILE> -c <[OPTIONAL] PATH OF CONFIG FILE> -u <[OPT] CUDA_DEVICES[0, 1]>
 
 # NOTE:
 # With the -n option its possible to choose a config file named like config_0.json, config_1.json, 
@@ -13,7 +13,7 @@
 # a specific path. -c option will override -l.
 
 
-optstring="f:l:n:c:u"
+optstring="f:l:n:c:u:"
 
 while getopts ${optstring} arg; do
   case "${arg}" in
