@@ -64,6 +64,9 @@ grid = SparseGrid.load(checkpoint, device)
 # It would be ideal if grid_dim is the same or multiple of training grid. But not strictly necessary?
 grid_res = torch.tensor([grid_dim, grid_dim, grid_dim])
 
+
+orig_grid_dim = grid.links.shape[0] # Assuming square grid.
+
 xx = torch.linspace(0, grid.links.shape[0] - 1 , grid_res[0] )
 yy = torch.linspace(0, grid.links.shape[1] - 1 , grid_res[1] )
 zz = torch.linspace(0, grid.links.shape[2] - 1 , grid_res[2] )
@@ -79,7 +82,7 @@ if euler_angles is not None:
     r = Rotation.from_euler(euler_mode,[c * euler_angles[0], c * euler_angles[1], c * euler_angles[2]])
     rot_mat = torch.tensor(r.as_matrix(), device = device, dtype=torch.float32)
     print(rot_mat)
-    offset = torch.tensor([grid_dim/2, grid_dim/2, grid_dim/2 ])
+    offset = torch.tensor([orig_grid_dim/2, orig_grid_dim/2, orig_grid_dim/2 ])
     grid_points = torch.matmul(rot_mat, (grid_points - offset).T).T + offset
 
 
