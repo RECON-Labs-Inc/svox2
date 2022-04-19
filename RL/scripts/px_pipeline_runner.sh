@@ -5,7 +5,7 @@
 # Will make a voxelized object from a video file, in a single command
 
 # USAGE:
-# px_pipeline_runner.sh <VIDEO_FILE> <PROJECT_FOLDER> <TRAIN_CONFIG_FILE_N> <GRID_DIM> <EULER_ANGLES> <COL_METHOD> 
+# px_pipeline_runner.sh <VIDEO_FILE> <PROJECT_FOLDER> <TRAIN_CONFIG_FILE_N> <GRID_DIM> <EULER_ANGLES> <COL_METHOD> <[OPT] CUDA_DEVICE>
 
 ## Check if env vars exist
 if ! [ -z $PROJECT_FOLDER ]
