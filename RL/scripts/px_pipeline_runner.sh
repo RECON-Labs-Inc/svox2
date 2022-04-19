@@ -22,6 +22,8 @@ TRAIN_CONFIG_FILE_N=$3
 GRID_DIM=$4
 EULER_ANGLES=$5
 COL_METHOD=$6
+CUDA_DEVICE=$7
+CUDA_DEVICE=${CUDA_DEVICE:-0}
 
 NUM_FRAMES=130
 
@@ -50,7 +52,7 @@ then
     exit 1
 fi
 
-vx_train.sh -f $PROJECT_FOLDER -n $TRAIN_CONFIG_FILE_N
+vx_train.sh -f $PROJECT_FOLDER -n $TRAIN_CONFIG_FILE_N -u $CUDA_DEVICE
 
 
 if ! [ "$?" -eq 0 ]
@@ -59,7 +61,7 @@ then
     exit 1
 fi
 echo "$PROJECT_FOLDER" "$GRID_DIM" "$EULER_ANGLES" "$COL_METHOD"
-vx_post_process.sh "$PROJECT_FOLDER" "$GRID_DIM" "$EULER_ANGLES" "$COL_METHOD"
+vx_post_process.sh "$PROJECT_FOLDER" "$GRID_DIM" "$EULER_ANGLES" "$COL_METHOD" "$CUDA_DEVICE"
 
 
 if ! [ "$?" -eq 0 ]

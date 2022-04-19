@@ -3,7 +3,7 @@
 ##################
 
 # USAGE:
-# vx_post_process.sh <PROJECT_FOLDER> <GRID_DIM> <EULER_ANGLES> <COL_METHOD> 
+# vx_post_process.sh <PROJECT_FOLDER> <GRID_DIM> <EULER_ANGLES> <COL_METHOD> <[OPT]CUDA_DEVICE>
 #
 
 # Chains the following stages in one: 
@@ -28,12 +28,14 @@ PROJECT_FOLDER=${PROJECT_FOLDER:-$1} # Useless???
 GRID_DIM=$2
 EULER_ANGLES=$3
 COL_METHOD=$4
+CUDA_DEVICE=$5
 
 echo "Project folder "$PROJECT_FOLDER
 echo "Grid dim "$GRID_DIM
 echo "Euler angles "$EULER_ANGLES
 echo "Coloroxing method "$COL_METHOD
-
+echo "Cuda device "$CUDA_DEVICE 
+ 
 echo "$PROJECT_FOLDER" "$GRID_DIM" "$EULER_ANGLES"
 
 
@@ -41,17 +43,27 @@ voxel_make.sh "$PROJECT_FOLDER" "$GRID_DIM" "$EULER_ANGLES"
 
 if ! [ "$?" -eq 0 ]
 then
-    echo "Post processing failed"
+    echo "Making voxel failed"
     exit 1
 fi
 
-voxel_mask.sh $PROJECT_FOLDER
+
+if [ -z "$CUDA_DEVICE" ]
+then
+    echo "No cuda device specified, using first available."
+    voxel_mask.sh $PROJECT_FOLDER
+else
+    # Using 10 and 0.5 for masking as default values
+    voxel_mask.sh $PROJECT_FOLDER 10 0.5 $CUDA_DEVICE
+fi
+
 
 if ! [ $? -eq 0 ]
 then
     echo "Masking failed"
     exit 1
 fi
+
 
 voxel_push.sh $PROJECT_FOLDER
 
