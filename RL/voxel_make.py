@@ -32,12 +32,14 @@ parser.add_argument("--grid_dim", type=int, default = 256, help = "grid_dimensio
 parser.add_argument("--debug_folder", type=str,default=None, help="debug folder for saving stuff")
 parser.add_argument("--euler_angles", type=float, nargs=3 ,default=None, help="Euler angles for rotation")
 parser.add_argument("--euler_mode", type=str, default="zyx", help="Euler angle rotation order")
+parser.add_argument("--dummy", action="store_true", help="Make a dummy axis voxel")
 args = parser.parse_args()
 checkpoint = args.checkpoint
 data_dir = args.data_dir
 grid_dim = args.grid_dim
 debug_folder = args.debug_folder
 euler_mode = args.euler_mode
+dummy = args.dummy
 
 if args.euler_angles is None:
     euler_angles = None
@@ -159,12 +161,25 @@ filtered_density = density[pos_dens_ind,0]
 color_labels = np.zeros((grid_dim*grid_dim*grid_dim))
 color_labels[filtered_indices.cpu().numpy()] = 2 # first index of palette, else is zero
 
-# Filter with spherical boundary
+
+
 sphere_filter_factor = 0.5 # Percentage of bounding box
 color_labels = filter_sphere(color_labels, 
                                     grid_points / (grid.shape[0] - 1 ), # grid_points are in grid_coord. I'm normalizing here (assuming square grid)
                                     center = torch.tensor([0, 0, 0]),
                                     radius = sphere_filter_factor)
+
+# Filter with spherical boundary
+if dummy is True:
+    color_labels = np.zeros((grid_dim, grid_dim, grid_dim))
+    half = int(grid_dim/2)
+    l = 20
+    color_labels[half:half + l,  half,   half] = 201 + 2 # RED
+    color_labels[half ,half:half + l,   half] = 121 + 2# GREEN
+    color_labels[half  ,  half, half:half + l] = 73 + 2# BLUE
+    color_labels = color_labels.flatten()
+    print("Writing dummy vox file")
+    print(half)
 
 vox_pal = palette_from_file("/workspace/data/vox_palette.png")
 
