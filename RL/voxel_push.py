@@ -73,8 +73,6 @@ debug_folder = args.debug_folder
 print("INPUT VOXEL", vox_file )
 print("REF VOXEL", ref_vox_file)
 
-device = "cuda:0" if torch.cuda.is_available() else "cpu"
-
 
 # ---- Load vox file
 

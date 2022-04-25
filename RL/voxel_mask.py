@@ -148,7 +148,7 @@ else:
 subset = range(0, poses.shape[0], int(poses.shape[0]/num_masks))
 source_image_filenames = [image_path_list[x] for x in subset]
 
-mask_subset = RL.utils.make_masks(source_image_filenames, save_folder = Path(data_dir)/"source"/"mask")
+mask_subset = RL.utils.make_masks(source_image_filenames, mask_path = Path(data_dir)/"source"/"mask")
 
 c2w_subset = []
 for ind in subset:

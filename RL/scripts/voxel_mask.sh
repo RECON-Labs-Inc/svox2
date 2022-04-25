@@ -4,7 +4,7 @@
 # DESCRIPTION
 # Removes artifacts from a voxelized object by computing masks
 # USAGE:
-# voxel_mask.sh <PROJECT_FOLDER> <NUM_MASKS> <MASK_THRES>
+# voxel_mask.sh <PROJECT_FOLDER> <NUM_MASKS> <MASK_THRES> <CUDA_DEVICE>
 
 
 ## Check if env vars exist
@@ -25,6 +25,9 @@ MASK_THRES=${3:-0.5}
 # Using 10 masking images by default
 NUM_MASKS=${2:-10}
 
+# Cuda visible devices is 0 by default
+CUDA_DEVICE=${4:-0}
+
 echo "Mask threshold "$MASK_THRES
 echo "Number of masks "$NUM_MASKS
 
@@ -39,7 +42,7 @@ total_log=$PROJECT_FOLDER/logs/time_total.log
 
 tic.sh $time_log_file
 # TODO: Change location of file?
-time python voxel_mask.py --checkpoint $PROJECT_FOLDER/ckpt/std/ckpt.npz --data_dir $PROJECT_FOLDER --mask_thres $MASK_THRES --num_masks $NUM_MASKS --source images 2>&1 | tee $LOG_FILE 
+time CUDA_VISIBLE_DEVICES=$CUDA_DEVICE python voxel_mask.py --checkpoint $PROJECT_FOLDER/ckpt/std/ckpt.npz --data_dir $PROJECT_FOLDER --mask_thres $MASK_THRES --num_masks $NUM_MASKS --source images 2>&1 | tee $LOG_FILE 
 EXIT_STATUS=${PIPESTATUS[0]:-1}
 
 toc.sh $time_log_file $total_log
