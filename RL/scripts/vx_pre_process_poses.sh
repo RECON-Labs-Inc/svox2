@@ -44,7 +44,7 @@ time_log_file=$PROJECT_FOLDER/logs/time_pre_process_poses.log
 total_log=$PROJECT_FOLDER/logs/time_total.log
 tic.sh $time_log_file
 
-python -m workflow.compute_poses --image_data_path $PROJECT_FOLDER/source/images --chunk_type raw_poses --remove_unaligned --out_dir $PROJECT_FOLDER/project_files --ms_downscale $MS_DOWNSAMPLING 2>&1 | tee "$LOG_FILE"
+python -m workflow.compute_poses --image_data_path $PROJECT_FOLDER/source/images --chunk_type raw_poses --remove_unaligned --out_dir $PROJECT_FOLDER/project_files --ms_downscale $MS_DOWNSAMPLING --dont_save 2>&1 | tee "$LOG_FILE"
 python -m workflow.export_cam_poses --ms_filename ms_poses.psz --chunk_type raw_poses --cam_json_filename cam_data.json --out_dir $PROJECT_FOLDER/project_files 2>&1 | tee -a "$LOG_FILE"
 python -m workflow.write_calibration --ms_filename ms_poses.psz --chunk_type raw_poses --cam_json_filename cam_data.json --out_dir $PROJECT_FOLDER/project_files 2>&1 | tee -a "$LOG_FILE"
 EXIT_STATUS=${PIPESTATUS[0]:-1}
